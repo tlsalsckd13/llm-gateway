@@ -52,7 +52,18 @@ async def dashboard(conn, user):
 async def my_keys(conn, user):
     rows = await conn.fetch(
         """
-        SELECT key_prefix, label, created_at, expires_at, last_used_at, revoked_at
+        SELECT key_hash,
+               key_prefix,
+               label,
+               created_at,
+               expires_at,
+               last_used_at,
+               revoked_at,
+               CASE
+                 WHEN revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN expires_at IS NOT NULL AND expires_at <= now() THEN 'expired'
+                 ELSE 'active'
+               END AS status
         FROM api_keys
         WHERE user_id = $1
         ORDER BY created_at DESC

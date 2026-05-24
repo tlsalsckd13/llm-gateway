@@ -85,7 +85,8 @@ async def budget_rows(conn):
 async def key_rows(conn):
     rows = await conn.fetch(
         """
-        SELECT COALESCE(k.key_prefix, substring(k.key_hash from 1 for 12)) AS key_prefix,
+        SELECT k.key_hash,
+               COALESCE(k.key_prefix, substring(k.key_hash from 1 for 12)) AS key_prefix,
                k.user_id,
                COALESCE(t.team_key, k.team_id) AS team_id,
                k.label,
@@ -93,7 +94,12 @@ async def key_rows(conn):
                k.expires_at,
                k.revoked_at,
                k.issued_via,
-               k.last_used_at
+               k.last_used_at,
+               CASE
+                 WHEN k.revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN k.expires_at IS NOT NULL AND k.expires_at <= now() THEN 'expired'
+                 ELSE 'active'
+               END AS status
         FROM api_keys k
         LEFT JOIN web_users wu ON lower(wu.email) = lower(k.user_id)
         LEFT JOIN teams t ON t.id = wu.team_id_fk

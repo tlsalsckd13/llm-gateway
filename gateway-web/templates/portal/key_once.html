@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}API Key 발급 완료{% endblock %}
+{% block heading %}API Key 발급 완료{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">평문 API Key</div>
+  <p class="mt-2 text-sm text-zinc-600">이 값은 이 화면에서만 확인할 수 있습니다.</p>
+  <div class="mt-4 rounded border border-zinc-200 bg-zinc-50 p-3">
+    <code class="break-all text-sm">{{ plain_key }}</code>
+  </div>
+  <div class="mt-5 rounded border border-zinc-200 bg-zinc-50 p-3">
+    <pre class="overflow-x-auto text-sm">export ANTHROPIC_BASE_URL=https://3.36.67.247
+export ANTHROPIC_API_KEY='{{ plain_key }}'</pre>
+  </div>
+  <div class="mt-5">
+    <a href="/portal/keys" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">목록으로</a>
+  </div>
+</section>
+{% endblock %}

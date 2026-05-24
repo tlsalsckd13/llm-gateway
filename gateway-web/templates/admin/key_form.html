@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}API Key 발급{% endblock %}
+{% block heading %}API Key 발급{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">사용자 명의 API Key 발급</div>
+  {% if errors.form %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+  {% endif %}
+  <form method="post" action="/admin/keys" class="mt-5 grid gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label class="block text-sm font-medium" for="user_email">사용자</label>
+      <select id="user_email" name="user_email" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        <option value="">선택</option>
+        {% for item in users %}
+        <option value="{{ item.email }}" {% if values.user_email == item.email %}selected{% endif %}>{{ item.display_name }} ({{ item.email }}) / {{ item.team_id }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.user_email %}<p class="mt-1 text-sm text-rose-700">{{ errors.user_email }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="label">라벨</label>
+      <input id="label" name="label" value="{{ values.label or '' }}" required placeholder="예: minchang local macbook" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.label %}<p class="mt-1 text-sm text-rose-700">{{ errors.label }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="expires_at">만료일</label>
+      <input id="expires_at" name="expires_at" type="datetime-local" value="{{ values.expires_at or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.expires_at %}<p class="mt-1 text-sm text-rose-700">{{ errors.expires_at }}</p>{% endif %}
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="/admin/keys" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+      <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">발급</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

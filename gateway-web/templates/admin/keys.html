@@ -3,10 +3,17 @@
 {% block heading %}Keys{% endblock %}
 {% block content %}
 <section class="panel">
-  <div class="panel-title">API Keys</div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">API Keys</div>
+      <div class="mt-1 text-sm text-zinc-500">전체 발급/폐기 현황</div>
+    </div>
+    <a href="/admin/keys/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800" aria-label="API Key 발급">API Key 발급</a>
+  </div>
   <div class="table-wrap mt-4">
     <table class="data-table">
-      <thead><tr><th>Key</th><th>User</th><th>Team</th><th>Label</th><th>Issued Via</th><th>Created</th><th>Expires</th><th>Revoked</th><th>Last Used</th></tr></thead>
+      <caption class="sr-only">API Key 목록</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">User</th><th scope="col">Team</th><th scope="col">Label</th><th scope="col">Issued Via</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
       <tbody>
       {% for key in keys %}
         <tr>
@@ -17,11 +24,21 @@
           <td>{{ key.issued_via or "manual" }}</td>
           <td>{{ key.created_at }}</td>
           <td>{{ key.expires_at or "-" }}</td>
-          <td>{{ key.revoked_at or "-" }}</td>
           <td>{{ key.last_used_at or "-" }}</td>
+          <td>{{ key.status }}</td>
+          <td>
+            {% if key.status == "active" %}
+            <form method="post" action="/admin/keys/{{ key.key_hash }}/revoke">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="inline-flex h-8 items-center rounded border border-rose-300 px-2 text-xs font-medium text-rose-700 hover:bg-rose-50">폐기</button>
+            </form>
+            {% else %}
+            -
+            {% endif %}
+          </td>
         </tr>
       {% else %}
-        <tr><td colspan="9" class="empty">No key rows</td></tr>
+        <tr><td colspan="10" class="empty">No key rows</td></tr>
       {% endfor %}
       </tbody>
     </table>

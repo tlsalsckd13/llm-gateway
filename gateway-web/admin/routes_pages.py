@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Request
 
 from admin import queries
+from auth.csrf import CSRF_COOKIE, create_csrf_token
 
 router = APIRouter(prefix="/admin")
 
@@ -39,7 +40,10 @@ async def budgets_page(request: Request):
 async def keys_page(request: Request):
     async with request.app.state.db.acquire() as conn:
         data = await queries.key_rows(conn)
-    return request.app.state.templates.TemplateResponse("admin/keys.html", ctx(request, "keys", keys=data))
+    token = create_csrf_token(request.app.state.session_secret)
+    response = request.app.state.templates.TemplateResponse("admin/keys.html", ctx(request, "keys", keys=data, csrf_token=token))
+    response.set_cookie(CSRF_COOKIE, token, httponly=True, secure=True, samesite="strict", max_age=3600, path="/admin")
+    return response
 
 
 @router.get("/dlp")

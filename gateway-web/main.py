@@ -11,6 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from admin.routes_api import router as admin_api_router
 from admin.routes_pages import router as admin_pages_router
+from admin.api_keys import api_router as api_key_api_router
+from admin.api_keys import page_router as api_key_page_router
 from admin.teams import api_router as team_api_router
 from admin.teams import page_router as team_page_router
 from admin.users import api_router as user_api_router
@@ -76,6 +78,8 @@ attach_auth_middleware(app)
 app.include_router(auth_router)
 app.include_router(admin_pages_router)
 app.include_router(admin_api_router)
+app.include_router(api_key_page_router)
+app.include_router(api_key_api_router)
 app.include_router(team_page_router)
 app.include_router(team_api_router)
 app.include_router(user_page_router)

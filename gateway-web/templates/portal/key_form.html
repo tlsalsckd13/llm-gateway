@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}새 API Key{% endblock %}
+{% block heading %}새 API Key{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">내 API Key 발급</div>
+  {% if errors.form %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+  {% endif %}
+  <form method="post" action="/portal/keys" class="mt-5 grid gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label class="block text-sm font-medium" for="label">라벨</label>
+      <input id="label" name="label" value="{{ values.label or '' }}" required placeholder="예: local claude code" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.label %}<p class="mt-1 text-sm text-rose-700">{{ errors.label }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="expires_at">만료일</label>
+      <input id="expires_at" name="expires_at" type="datetime-local" value="{{ values.expires_at or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.expires_at %}<p class="mt-1 text-sm text-rose-700">{{ errors.expires_at }}</p>{% endif %}
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="/portal/keys" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+      <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">발급</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -3,11 +3,17 @@
 {% block heading %}내 API Keys{% endblock %}
 {% block content %}
 <section class="panel">
-  <div class="panel-title">API Keys</div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">API Keys</div>
+      <div class="mt-1 text-sm text-zinc-500">본인 명의 API Key</div>
+    </div>
+    <a href="/portal/keys/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800" aria-label="새 API Key 발급">새 키 발급</a>
+  </div>
   <div class="table-wrap mt-4">
     <table class="data-table">
       <caption class="sr-only">내 API Key 목록</caption>
-      <thead><tr><th scope="col">Key</th><th scope="col">Label</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th></tr></thead>
+      <thead><tr><th scope="col">Key</th><th scope="col">Label</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
       <tbody>
       {% for key in keys %}
         <tr>
@@ -16,10 +22,20 @@
           <td>{{ key.created_at }}</td>
           <td>{{ key.expires_at or "-" }}</td>
           <td>{{ key.last_used_at or "-" }}</td>
-          <td>{% if key.revoked_at %}폐기{% else %}활성{% endif %}</td>
+          <td>{{ key.status }}</td>
+          <td>
+            {% if key.status == "active" %}
+            <form method="post" action="/portal/keys/{{ key.key_hash }}/revoke">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="inline-flex h-8 items-center rounded border border-rose-300 px-2 text-xs font-medium text-rose-700 hover:bg-rose-50">폐기</button>
+            </form>
+            {% else %}
+            -
+            {% endif %}
+          </td>
         </tr>
       {% else %}
-        <tr><td colspan="6" class="empty">아직 발급된 API Key가 없습니다.</td></tr>
+        <tr><td colspan="7" class="empty">아직 발급된 API Key가 없습니다.</td></tr>
       {% endfor %}
       </tbody>
     </table>

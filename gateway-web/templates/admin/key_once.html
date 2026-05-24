@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}API Key 발급 완료{% endblock %}
+{% block heading %}API Key 발급 완료{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">평문 API Key</div>
+  <p class="mt-2 text-sm text-zinc-600">이 값은 이 화면에서만 확인할 수 있습니다.</p>
+  <div class="mt-4 rounded border border-zinc-200 bg-zinc-50 p-3">
+    <code class="break-all text-sm">{{ plain_key }}</code>
+  </div>
+  <dl class="mt-5 grid gap-3 text-sm md:grid-cols-2">
+    <div class="health-row"><dt>Key</dt><dd><code>{{ key.key_prefix }}</code></dd></div>
+    <div class="health-row"><dt>User</dt><dd>{{ key.user_id }}</dd></div>
+    <div class="health-row"><dt>Team</dt><dd>{{ key.team_id }}</dd></div>
+    <div class="health-row"><dt>Label</dt><dd>{{ key.label }}</dd></div>
+  </dl>
+  <div class="mt-5">
+    <a href="/admin/keys" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">목록으로</a>
+  </div>
+</section>
+{% endblock %}
