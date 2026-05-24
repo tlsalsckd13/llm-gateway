@@ -1,0 +1,41 @@
+services:
+  gateway:
+    image: portkeyai/gateway:latest
+    container_name: portkey-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - LOG_STORE=file
+      - PORT=8787
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
+    volumes:
+      - ./gateway-logs:/app/logs
+      - ./configs:/app/configs:ro
+    networks:
+      - llm-net
+
+  usage-collector:
+    build: ./usage-collector
+    container_name: usage-collector
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORTKEY_URL=http://gateway:8787/v1/chat/completions
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - gateway
+    networks:
+      - llm-net
+
+networks:
+  llm-net:
+    driver: bridge

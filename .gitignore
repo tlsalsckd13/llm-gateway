@@ -1,0 +1,46 @@
+# 환경/시크릿
+.env
+.aws-creds.env
+*.env.local
+**/secrets/
+
+# 인증서 / 키
+nginx/certs/*.crt
+nginx/certs/*.key
+nginx/certs/*.pem
+*.pem
+*.p12
+/root/.llm-gateway-key
+.llm-gateway-key
+
+# 백업
+*.bak
+*.bak.*
+backup-schema-*.sql
+llm-gateway-snapshot-*.tar.gz
+
+# 로컬 nginx 실제 conf
+nginx/conf.d/*.conf
+!nginx/conf.d/*.conf.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Docker 임시
+docker-compose.override.yml
+gateway-logs/
+
+# PoC 지시/산출물 문서는 서비스 repo에 넣지 않음
+codex-work-output/
+directing/
+handover/
