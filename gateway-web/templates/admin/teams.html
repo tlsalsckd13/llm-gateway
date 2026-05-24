@@ -40,7 +40,7 @@
         </tr>
       </thead>
       <tbody>
-      {% for team in teams.items %}
+      {% for team in teams["items"] %}
         <tr class="{% if team.monthly_pct >= team.alert_threshold_pct %}row-warn{% endif %}">
           <td>{{ team.id }}</td>
           <td><code>{{ team.team_key }}</code></td>
