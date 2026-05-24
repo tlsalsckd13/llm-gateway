@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 from auth.csrf import CSRF_COOKIE, create_csrf_token, verify_csrf_token
 from auth.middleware import SESSION_COOKIE, sign_session_id
@@ -65,6 +65,11 @@ async def login_form(request: Request):
         path="/admin",
     )
     return response
+
+
+@router.head("/admin/login")
+async def login_head():
+    return Response(status_code=200)
 
 
 @router.post("/admin/login")
