@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}LLM Gateway Admin{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/custom.css">
+  </head>
+  <body class="min-h-screen bg-zinc-100 text-zinc-950">
+    {% if user %}
+    <div class="min-h-screen lg:flex">
+      <aside class="border-b border-zinc-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0 lg:border-r">
+        <div class="flex h-16 items-center justify-between px-5 lg:h-20">
+          <a href="/admin/" class="text-lg font-semibold tracking-normal">LLM Gateway</a>
+          <span class="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Admin</span>
+        </div>
+        <nav class="grid grid-cols-3 gap-1 px-3 pb-3 text-sm lg:block lg:space-y-1">
+          {% set nav = [
+            ("overview", "/admin/", "Overview"),
+            ("usage", "/admin/usage", "Usage"),
+            ("budgets", "/admin/budgets", "Budgets"),
+            ("keys", "/admin/keys", "Keys"),
+            ("dlp", "/admin/dlp", "DLP"),
+            ("audit", "/admin/audit", "Audit")
+          ] %}
+          {% for key, href, label in nav %}
+            <a href="{{ href }}" class="nav-link {% if page == key %}nav-link-active{% endif %}">{{ label }}</a>
+          {% endfor %}
+        </nav>
+        <div class="hidden border-t border-zinc-200 p-4 lg:block">
+          <div class="text-sm font-medium">{{ user.display_name }}</div>
+          <div class="mt-1 truncate text-xs text-zinc-500">{{ user.email }}</div>
+          <a href="/admin/logout" class="mt-4 inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">Logout</a>
+        </div>
+      </aside>
+      <main class="lg:ml-64 min-h-screen">
+        <header class="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-5 backdrop-blur">
+          <div>
+            <h1 class="text-xl font-semibold">{% block heading %}{% endblock %}</h1>
+          </div>
+          <a href="/admin/logout" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50 lg:hidden">Logout</a>
+        </header>
+        <section class="mx-auto max-w-7xl px-5 py-6">
+          {% block content %}{% endblock %}
+        </section>
+      </main>
+    </div>
+    {% else %}
+      {% block public_content %}{% endblock %}
+    {% endif %}
+    <script src="/static/js/dashboard.js"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

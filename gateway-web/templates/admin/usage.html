@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Usage{% endblock %}
+{% block heading %}Usage{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="panel-title">Last 7 Days</div>
+    <a href="/api/admin/usage.csv?days=7" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">CSV</a>
+  </div>
+  <div class="mt-5 h-72">
+    <canvas id="usageChart"></canvas>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">Top Users</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>User</th><th>Team</th><th>Calls</th><th>Input</th><th>Output</th><th>Cost</th></tr></thead>
+      <tbody>
+      {% for row in data.top_users %}
+        <tr>
+          <td>{{ row.user_id }}</td>
+          <td>{{ row.team_id }}</td>
+          <td>{{ row.calls }}</td>
+          <td>{{ "{:,}".format(row.input_tokens) }}</td>
+          <td>{{ "{:,}".format(row.output_tokens) }}</td>
+          <td>${{ "%.4f"|format(row.cost_usd) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">No usage rows</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.renderUsageChart && window.renderUsageChart("/api/admin/usage?days=7");
+</script>
+{% endblock %}

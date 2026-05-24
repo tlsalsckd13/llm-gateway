@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block heading %}Overview{% endblock %}
+{% block content %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <div class="metric-card">
+    <div class="metric-label">Calls Today</div>
+    <div class="metric-value">{{ data.today.calls }}</div>
+    <div class="metric-sub">Yesterday {{ data.yesterday.calls }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Input Tokens</div>
+    <div class="metric-value">{{ "{:,}".format(data.today.input_tokens) }}</div>
+    <div class="metric-sub">Today</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Output Tokens</div>
+    <div class="metric-value">{{ "{:,}".format(data.today.output_tokens) }}</div>
+    <div class="metric-sub">Today</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Cost Today</div>
+    <div class="metric-value">${{ "%.4f"|format(data.today.cost_usd) }}</div>
+    <div class="metric-sub">Yesterday ${{ "%.4f"|format(data.yesterday.cost_usd) }}</div>
+  </div>
+</div>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+  <section class="panel">
+    <div class="panel-title">Team Budgets</div>
+    <div class="mt-4 space-y-4">
+      {% for row in data.budgets %}
+      <div>
+        <div class="mb-1 flex items-center justify-between text-sm">
+          <span class="font-medium">{{ row.team_id }}</span>
+          <span class="text-zinc-500">${{ "%.4f"|format(row.month_used_usd) }} / ${{ "%.2f"|format(row.monthly_limit_usd) }}</span>
+        </div>
+        <div class="h-2 overflow-hidden rounded bg-zinc-200">
+          <div class="h-full {% if row.monthly_pct >= 80 %}bg-amber-500{% else %}bg-emerald-600{% endif %}" style="width: {{ [row.monthly_pct, 100]|min }}%"></div>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty">No budget rows</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">System Health</div>
+    <dl class="mt-4 grid gap-3 text-sm" x-data="{health: null}" x-init="fetch('/api/admin/health').then(r => r.json()).then(j => health = j)">
+      <div class="health-row"><dt>DB</dt><dd x-text="health?.db || 'checking'"></dd></div>
+      <div class="health-row"><dt>Usage Collector</dt><dd x-text="health?.usage_collector || 'checking'"></dd></div>
+      <div class="health-row"><dt>Opus 4.7</dt><dd>configured</dd></div>
+      <div class="health-row"><dt>Haiku 4.5</dt><dd>pending</dd></div>
+    </dl>
+  </section>
+</div>
+
+<section class="panel mt-6">
+  <div class="panel-title">Recent DLP Events</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Time</th><th>Action</th><th>User</th><th>Pattern</th><th>Scope</th></tr></thead>
+      <tbody>
+      {% for event in data.recent_dlp %}
+        <tr>
+          <td>{{ event.created_at }}</td>
+          <td>{{ event.action }}</td>
+          <td>{{ event.target_id or "-" }}</td>
+          <td>{{ event.metadata.pattern or event.metadata.patterns or "-" }}</td>
+          <td>{{ event.metadata.scope or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">No DLP events</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

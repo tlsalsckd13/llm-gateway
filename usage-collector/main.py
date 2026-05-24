@@ -283,6 +283,18 @@ async def log_usage(user_id, team_id, skill, model, in_tok, out_tok, cost, req_i
     except Exception as e:
         log.error(f"DB insert failed: {e}")
 
+async def log_audit_event(actor_role, action, target_type=None, target_id=None, metadata=None, ip_address=None):
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("""
+              INSERT INTO audit_log(
+                actor_role, action, target_type, target_id, metadata, ip_address
+              ) VALUES ($1,$2,$3,$4,$5::jsonb,$6::inet)
+            """, actor_role, action, target_type, target_id,
+                  json.dumps(metadata or {}, ensure_ascii=False), ip_address)
+    except Exception as e:
+        log.error(f"audit_log insert failed: {e}")
+
 async def resolve_api_key(api_key):
     if not api_key: return (None, None)
     h = hash_api_key(api_key)
@@ -444,6 +456,19 @@ async def messages(request: Request):
             dlp_hit = strict_result["pattern"]
             blocked_reason = f"dlp_{dlp_hit}"
             log.warning(f"DLP block(messages): user={user_id} team={team_id} pattern={dlp_hit} scope=current_user_input")
+            await log_audit_event(
+                "system",
+                "dlp.block",
+                target_type="user",
+                target_id=user_id,
+                metadata={
+                    "pattern": dlp_hit,
+                    "scope": "current_user_input",
+                    "team_id": team_id,
+                    "model": routed_model,
+                },
+                ip_address=request.client.host if request.client else None,
+            )
             await log_usage(user_id, team_id, skill, routed_model, 0, 0, 0.0, None, blocked_reason, 0)
             return JSONResponse(status_code=403, content={
                 "type": "error",
@@ -473,6 +498,22 @@ async def messages(request: Request):
 
     if redaction_log:
         log.info(f"DLP redact(messages): user={user_id} entries={len(redaction_log)} details={redaction_log}")
+        redacted_patterns = []
+        for entry in redaction_log:
+            _merge_applied(redacted_patterns, entry.get("applied"))
+        await log_audit_event(
+            "system",
+            "dlp.mask",
+            target_type="user",
+            target_id=user_id,
+            metadata={
+                "patterns": redacted_patterns,
+                "scope": "history_or_tool_context",
+                "team_id": team_id,
+                "model": routed_model,
+            },
+            ip_address=request.client.host if request.client else None,
+        )
 
     # Budget
     budget_status = await get_budget_status(team_id, user_id)

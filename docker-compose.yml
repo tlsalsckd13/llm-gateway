@@ -32,6 +32,38 @@ services:
     networks:
       - llm-net
 
+  gateway-web:
+    image: 061051247564.dkr.ecr.ap-northeast-2.amazonaws.com/kcs-llm-gateway/gateway-web:${GATEWAY_WEB_TAG:-latest}
+    container_name: gateway-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8090"
+    env_file:
+      - .env
+    environment:
+      - COLLECTOR_URL=http://usage-collector:8080
+      - AWS_DEFAULT_REGION=ap-northeast-2
+    depends_on:
+      - usage-collector
+    networks:
+      - llm-net
+
+  nginx-proxy:
+    image: nginx:1.27-alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - usage-collector
+      - gateway-web
+    networks:
+      - llm-net
+
 networks:
   llm-net:
     driver: bridge

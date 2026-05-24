@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Budgets{% endblock %}
+{% block heading %}Budgets{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">Team Budget Status</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Team</th><th>Today</th><th>Daily Limit</th><th>Daily %</th><th>Month</th><th>Monthly Limit</th><th>Monthly %</th></tr></thead>
+      <tbody>
+      {% for row in budgets %}
+        <tr class="{% if row.daily_pct >= 80 or row.monthly_pct >= 80 %}row-warn{% endif %}">
+          <td class="font-medium">{{ row.team_id }}</td>
+          <td>${{ "%.4f"|format(row.today_used_usd) }}</td>
+          <td>{% if row.daily_limit_usd %}${{ "%.2f"|format(row.daily_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{{ "%.1f"|format(row.daily_pct) }}%</td>
+          <td>${{ "%.4f"|format(row.month_used_usd) }}</td>
+          <td>${{ "%.2f"|format(row.monthly_limit_usd) }}</td>
+          <td>{{ "%.1f"|format(row.monthly_pct) }}%</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">No budget rows</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

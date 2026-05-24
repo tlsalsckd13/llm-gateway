@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Audit{% endblock %}
+{% block heading %}Audit{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">Audit Log</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>IP</th></tr></thead>
+      <tbody>
+      {% for event in events %}
+        <tr>
+          <td>{{ event.created_at }}</td>
+          <td>{{ event.actor_role }}{% if event.actor_user_id %} #{{ event.actor_user_id }}{% endif %}</td>
+          <td>{{ event.action }}</td>
+          <td>{{ event.target_type or "-" }} {{ event.target_id or "" }}</td>
+          <td>{{ event.ip_address or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">No audit events</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

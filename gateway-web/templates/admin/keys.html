@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Keys{% endblock %}
+{% block heading %}Keys{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">API Keys</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Key</th><th>User</th><th>Team</th><th>Label</th><th>Issued Via</th><th>Created</th><th>Revoked</th><th>Last Used</th></tr></thead>
+      <tbody>
+      {% for key in keys %}
+        <tr>
+          <td><code>{{ key.key_prefix }}</code></td>
+          <td>{{ key.user_id }}</td>
+          <td>{{ key.team_id }}</td>
+          <td>{{ key.label or "-" }}</td>
+          <td>{{ key.issued_via or "manual" }}</td>
+          <td>{{ key.created_at }}</td>
+          <td>{{ key.revoked_at or "-" }}</td>
+          <td>{{ key.last_used_at or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty">No key rows</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

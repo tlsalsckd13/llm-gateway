@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}DLP{% endblock %}
+{% block heading %}DLP{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">DLP Events</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Time</th><th>Action</th><th>User</th><th>Pattern</th><th>Scope</th><th>Model</th></tr></thead>
+      <tbody>
+      {% for event in events %}
+        <tr>
+          <td>{{ event.created_at }}</td>
+          <td>{{ event.action }}</td>
+          <td>{{ event.target_id or "-" }}</td>
+          <td>{{ event.metadata.pattern or event.metadata.patterns or "-" }}</td>
+          <td>{{ event.metadata.scope or "-" }}</td>
+          <td>{{ event.metadata.model or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">No DLP events</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

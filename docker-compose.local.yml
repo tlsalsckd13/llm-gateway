@@ -29,6 +29,21 @@ services:
     networks:
       - llm-net
 
+  gateway-web:
+    build: ./gateway-web
+    image: kcs-llm-gateway/gateway-web:local
+    container_name: gateway-web-local
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env.local
+    environment:
+      - COLLECTOR_URL=http://usage-collector:8080
+    depends_on:
+      - usage-collector
+    networks:
+      - llm-net
+
 networks:
   llm-net:
     driver: bridge
