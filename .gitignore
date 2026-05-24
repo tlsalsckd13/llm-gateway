@@ -40,6 +40,9 @@ __pycache__/
 docker-compose.override.yml
 gateway-logs/
 
+# Local-only compose env
+.env.local
+
 # PoC 지시/산출물 문서는 서비스 repo에 넣지 않음
 codex-work-output/
 directing/

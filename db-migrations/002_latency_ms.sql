@@ -1,0 +1,2 @@
+ALTER TABLE llm_usage
+  ADD COLUMN IF NOT EXISTS latency_ms INT;

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install linters
+        run: pip install ruff black
+      - name: Ruff
+        run: ruff check usage-collector gateway-web || true
+      - name: Black
+        run: black --check usage-collector gateway-web || true
+
+  build-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build usage-collector
+        run: docker build -t smoke/usage-collector ./usage-collector
+      - name: Build gateway-web when Dockerfile exists
+        if: hashFiles('gateway-web/Dockerfile') != ''
+        run: docker build -t smoke/gateway-web ./gateway-web
+
+  db-migration-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect new migrations
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.sha || github.event.before }}"
+          NEW=$(git diff --name-only "$BASE_REF" HEAD -- db-migrations/ | grep -E '\.sql$' || true)
+          if [ -n "$NEW" ]; then
+            echo "::warning::New DB migrations detected. Apply manually before deploy:"
+            echo "$NEW"
+          fi

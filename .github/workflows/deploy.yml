@@ -1,0 +1,136 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      git_sha:
+        description: "Specific commit SHA to deploy. Defaults to the triggering commit."
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ inputs.git_sha || github.sha }}
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "image_tag=${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push usage-collector
+        run: |
+          IMAGE=${{ vars.ECR_REGISTRY }}/kcs-llm-gateway/usage-collector
+          TAG=${{ steps.meta.outputs.image_tag }}
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" ./usage-collector
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+
+      - name: Build and push gateway-web when Dockerfile exists
+        if: hashFiles('gateway-web/Dockerfile') != ''
+        run: |
+          IMAGE=${{ vars.ECR_REGISTRY }}/kcs-llm-gateway/gateway-web
+          TAG=${{ steps.meta.outputs.image_tag }}
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" ./gateway-web
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.git_sha || github.sha }}
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync compose and deploy script via SSM
+        run: |
+          COMPOSE_B64=$(base64 -w0 docker-compose.yml)
+          DEPLOY_SCRIPT_B64=$(base64 -w0 scripts/ec2-deploy.sh)
+          TAG=${{ needs.build-and-push.outputs.image_tag }}
+
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy commit ${{ github.sha }}" \
+            --parameters commands="[\"set -e\",\
+            \"cd ${{ vars.DEPLOY_PATH }}\",\
+            \"echo $COMPOSE_B64 | base64 -d > docker-compose.yml\",\
+            \"mkdir -p scripts && echo $DEPLOY_SCRIPT_B64 | base64 -d > scripts/ec2-deploy.sh && chmod +x scripts/ec2-deploy.sh\",\
+            \"export USAGE_COLLECTOR_TAG=$TAG\",\
+            \"export GATEWAY_WEB_TAG=$TAG\",\
+            \"export ECR_REGISTRY=${{ vars.ECR_REGISTRY }}\",\
+            \"bash scripts/ec2-deploy.sh\"]" \
+            --query "Command.CommandId" --output text)
+
+          echo "Command ID: $CMD_ID"
+
+          for i in {1..60}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            echo "[$i] Status: $STATUS"
+            if [ "$STATUS" = "Success" ]; then
+              aws ssm get-command-invocation \
+                --command-id "$CMD_ID" \
+                --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+                --query "StandardOutputContent" --output text
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              aws ssm get-command-invocation \
+                --command-id "$CMD_ID" \
+                --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+                --query "StandardErrorContent" --output text
+              exit 1
+            fi
+            sleep 10
+          done
+
+          echo "::error::SSM command timed out"
+          exit 1
+
+      - name: Health check through SSM
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands="[\"curl -sf http://localhost:8080/health || exit 1\"]" \
+            --query "Command.CommandId" --output text)
+          sleep 10
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --query "Status" --output text)
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::Health check failed"
+            exit 1
+          fi
