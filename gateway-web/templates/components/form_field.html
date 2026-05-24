@@ -1,0 +1,7 @@
+{% macro input(name, label, value="", type="text", required=false, error=None, placeholder="") -%}
+  <div>
+    <label class="block text-sm font-medium" for="{{ name }}">{{ label }}</label>
+    <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value or '' }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %} class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+    {% if error %}<p class="mt-1 text-sm text-rose-700">{{ error }}</p>{% endif %}
+  </div>
+{%- endmacro %}

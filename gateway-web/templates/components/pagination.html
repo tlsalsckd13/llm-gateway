@@ -1,0 +1,14 @@
+{% macro pager(page) -%}
+  <nav class="mt-4 flex items-center justify-between text-sm" aria-label="페이지네이션">
+    <div class="text-zinc-500">총 {{ page.total }}건</div>
+    <div class="flex gap-2">
+      {% if page.has_prev %}
+        <a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="?page={{ page.page - 1 }}&per_page={{ page.per_page }}">이전</a>
+      {% endif %}
+      <span class="inline-flex h-9 items-center px-2">{{ page.page }}</span>
+      {% if page.has_next %}
+        <a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="?page={{ page.page + 1 }}&per_page={{ page.per_page }}">다음</a>
+      {% endif %}
+    </div>
+  </nav>
+{%- endmacro %}

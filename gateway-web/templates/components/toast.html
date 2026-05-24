@@ -1,0 +1,5 @@
+{% macro toast(flash) -%}
+  {% if flash %}
+    <div class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">{{ flash.message }}</div>
+  {% endif %}
+{%- endmacro %}

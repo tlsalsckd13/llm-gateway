@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}프로필{% endblock %}
+{% block heading %}프로필{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">기본 정보</div>
+  <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2">
+    <div class="health-row"><dt>이름</dt><dd>{{ user.display_name }}</dd></div>
+    <div class="health-row"><dt>이메일</dt><dd>{{ user.email }}</dd></div>
+    <div class="health-row"><dt>팀</dt><dd>{{ user.team_name or user.team_key or user.team_id }}</dd></div>
+    <div class="health-row"><dt>권한</dt><dd>{{ user.role }}</dd></div>
+  </dl>
+</section>
+{% endblock %}

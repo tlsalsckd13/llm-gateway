@@ -1,27 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Keys{% endblock %}
-{% block heading %}Keys{% endblock %}
+{% block title %}내 API Keys{% endblock %}
+{% block heading %}내 API Keys{% endblock %}
 {% block content %}
 <section class="panel">
   <div class="panel-title">API Keys</div>
   <div class="table-wrap mt-4">
     <table class="data-table">
-      <thead><tr><th>Key</th><th>User</th><th>Team</th><th>Label</th><th>Issued Via</th><th>Created</th><th>Expires</th><th>Revoked</th><th>Last Used</th></tr></thead>
+      <caption class="sr-only">내 API Key 목록</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">Label</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th></tr></thead>
       <tbody>
       {% for key in keys %}
         <tr>
           <td><code>{{ key.key_prefix }}</code></td>
-          <td>{{ key.user_id }}</td>
-          <td>{{ key.team_id }}</td>
           <td>{{ key.label or "-" }}</td>
-          <td>{{ key.issued_via or "manual" }}</td>
           <td>{{ key.created_at }}</td>
           <td>{{ key.expires_at or "-" }}</td>
-          <td>{{ key.revoked_at or "-" }}</td>
           <td>{{ key.last_used_at or "-" }}</td>
+          <td>{% if key.revoked_at %}폐기{% else %}활성{% endif %}</td>
         </tr>
       {% else %}
-        <tr><td colspan="9" class="empty">No key rows</td></tr>
+        <tr><td colspan="6" class="empty">아직 발급된 API Key가 없습니다.</td></tr>
       {% endfor %}
       </tbody>
     </table>

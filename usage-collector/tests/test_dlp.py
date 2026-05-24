@@ -19,6 +19,32 @@ def test_dlp_redacts_history_card_number():
     assert result["applied"] == ["card"]
 
 
+def test_dlp_mask_policy_does_not_block_current_turn():
+    policies = [
+        {
+            "pattern_type": "custom",
+            "_compiled": collector.re.compile(r"secret-\d+"),
+            "redaction_token": "[MASKED]",
+            "action": "mask",
+        }
+    ]
+    assert collector.dlp_check_strict("secret-123", policies=policies) == {"blocked": False, "pattern": None}
+    assert collector.dlp_redact("secret-123", policies=policies) == {"redacted_text": "[MASKED]", "applied": ["custom"]}
+
+
+def test_dlp_block_policy_does_not_mask_history():
+    policies = [
+        {
+            "pattern_type": "custom",
+            "_compiled": collector.re.compile(r"secret-\d+"),
+            "redaction_token": "[MASKED]",
+            "action": "block",
+        }
+    ]
+    assert collector.dlp_check_strict("secret-123", policies=policies) == {"blocked": True, "pattern": "custom"}
+    assert collector.dlp_redact("secret-123", policies=policies) == {"redacted_text": "secret-123", "applied": []}
+
+
 def test_latest_user_message_detection():
     messages = [
         {"role": "user", "content": "first"},

@@ -11,13 +11,22 @@
   </head>
   <body class="min-h-screen bg-zinc-100 text-zinc-950">
     {% if user %}
+    {% set current_section = section|default("admin") %}
     <div class="min-h-screen lg:flex">
       <aside class="border-b border-zinc-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0 lg:border-r">
         <div class="flex h-16 items-center justify-between px-5 lg:h-20">
-          <a href="/admin/" class="text-lg font-semibold tracking-normal">LLM Gateway</a>
-          <span class="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Admin</span>
+          <a href="{% if current_section == 'portal' %}/portal/{% else %}/admin/{% endif %}" class="text-lg font-semibold tracking-normal">LLM Gateway</a>
+          <span class="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">{% if current_section == "portal" %}Portal{% else %}Admin{% endif %}</span>
         </div>
         <nav class="grid grid-cols-3 gap-1 px-3 pb-3 text-sm lg:block lg:space-y-1">
+          {% if current_section == "portal" %}
+          {% set nav = [
+            ("portal_dashboard", "/portal/", "Dashboard"),
+            ("portal_keys", "/portal/keys", "API Keys"),
+            ("portal_usage", "/portal/usage", "Usage"),
+            ("portal_profile", "/portal/profile", "Profile")
+          ] %}
+          {% else %}
           {% set nav = [
             ("overview", "/admin/", "Overview"),
             ("usage", "/admin/usage", "Usage"),
@@ -26,6 +35,7 @@
             ("dlp", "/admin/dlp", "DLP"),
             ("audit", "/admin/audit", "Audit")
           ] %}
+          {% endif %}
           {% for key, href, label in nav %}
             <a href="{{ href }}" class="nav-link {% if page == key %}nav-link-active{% endif %}">{{ label }}</a>
           {% endfor %}
@@ -33,6 +43,9 @@
         <div class="hidden border-t border-zinc-200 p-4 lg:block">
           <div class="text-sm font-medium">{{ user.display_name }}</div>
           <div class="mt-1 truncate text-xs text-zinc-500">{{ user.email }}</div>
+          {% if current_section != "portal" %}
+          <a href="/portal/profile" class="mt-4 inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">My Profile</a>
+          {% endif %}
           <a href="/admin/logout" class="mt-4 inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">Logout</a>
         </div>
       </aside>

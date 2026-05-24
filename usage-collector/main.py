@@ -1,4 +1,5 @@
 import os, re, time, json, hashlib, asyncio, logging, copy
+from datetime import datetime, timezone
 import asyncpg, httpx, boto3
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -58,6 +59,10 @@ DLP_REDACTION_TOKENS = {
     "account": "[REDACTED-ACCOUNT]",
 }
 
+DLP_CACHE_TTL_SEC = 60
+_dlp_cache_lock = asyncio.Lock()
+_dlp_cache = {"policies": None, "loaded_at": 0.0}
+
 def route_model(team_id):
     return TEAM_MODEL_MAP.get(team_id, FALLBACK_MODEL)
 
@@ -104,26 +109,79 @@ def extract_text_anthropic(body):
                                 chunks.append(tb.get("text", ""))
     return "\n".join(chunks)
 
-def dlp_scan(text):
+def iter_dlp_policies(policies=None):
+    if policies is not None:
+        for policy in policies:
+            yield policy
+        return
     for name, pat in DLP_PATTERNS:
-        if pat.search(text or ""): return name
+        yield {
+            "name": name,
+            "pattern_type": name,
+            "_compiled": pat,
+            "redaction_token": DLP_REDACTION_TOKENS.get(name, f"[REDACTED-{name.upper()}]"),
+            "action": "block_and_mask",
+        }
+
+
+async def get_active_dlp_policies():
+    now = time.time()
+    async with _dlp_cache_lock:
+        if _dlp_cache["policies"] is not None and (now - _dlp_cache["loaded_at"]) <= DLP_CACHE_TTL_SEC:
+            return _dlp_cache["policies"]
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, name, pattern_type, pattern_regex, redaction_token, action, priority
+                    FROM dlp_policies
+                    WHERE is_active = TRUE
+                    ORDER BY priority ASC, id ASC
+                    """
+                )
+            policies = []
+            for row in rows:
+                item = dict(row)
+                item["_compiled"] = re.compile(item["pattern_regex"])
+                policies.append(item)
+            _dlp_cache["policies"] = policies or list(iter_dlp_policies())
+            _dlp_cache["loaded_at"] = now
+            return _dlp_cache["policies"]
+        except Exception as exc:
+            log.warning(f"dlp policy load failed; using built-in policies: {exc}")
+            _dlp_cache["policies"] = list(iter_dlp_policies())
+            _dlp_cache["loaded_at"] = now
+            return _dlp_cache["policies"]
+
+
+def dlp_scan(text, policies=None):
+    for policy in iter_dlp_policies(policies):
+        if policy.get("_compiled").search(text or ""):
+            return policy.get("pattern_type") or policy.get("name")
     return None
 
-def dlp_check_strict(text):
-    hit = dlp_scan(text or "")
-    return {"blocked": bool(hit), "pattern": hit}
+def dlp_check_strict(text, policies=None):
+    for policy in iter_dlp_policies(policies):
+        if policy.get("action") not in ("block", "block_and_mask"):
+            continue
+        if policy.get("_compiled").search(text or ""):
+            return {"blocked": True, "pattern": policy.get("pattern_type") or policy.get("name")}
+    return {"blocked": False, "pattern": None}
 
 def _merge_applied(dst, names):
     for name in names or []:
         if name not in dst:
             dst.append(name)
 
-def dlp_redact(text):
+def dlp_redact(text, policies=None):
     redacted = text or ""
     applied = []
-    for name, pat in DLP_PATTERNS:
-        token = DLP_REDACTION_TOKENS.get(name, f"[REDACTED-{name.upper()}]")
-        new_text, count = pat.subn(token, redacted)
+    for policy in iter_dlp_policies(policies):
+        if policy.get("action") not in ("mask", "block_and_mask"):
+            continue
+        name = policy.get("pattern_type") or policy.get("name")
+        token = policy.get("redaction_token") or DLP_REDACTION_TOKENS.get(name, f"[REDACTED-{str(name).upper()}]")
+        new_text, count = policy.get("_compiled").subn(token, redacted)
         if count:
             redacted = new_text
             _merge_applied(applied, [name])
@@ -150,7 +208,7 @@ def extract_text_from_message(message):
         return ""
     return extract_text_from_value(message.get("content"))
 
-def dlp_prepare_current_user_message(message):
+def dlp_prepare_current_user_message(message, policies=None):
     """Return strict-check text for the newest user input and redact older context
     that Claude Code may pack into the same user message.
     """
@@ -192,22 +250,22 @@ def dlp_prepare_current_user_message(message):
             new_content.append(block)
             continue
 
-        result = dlp_redact_recursive(block)
+        result = dlp_redact_recursive(block, policies=policies)
         new_content.append(result["redacted"])
         _merge_applied(applied, result["applied"])
 
     redacted_message["content"] = new_content
     return {"message": redacted_message, "current_text": current_text, "applied": applied}
 
-def dlp_redact_recursive(value):
+def dlp_redact_recursive(value, policies=None):
     if isinstance(value, str):
-        result = dlp_redact(value)
+        result = dlp_redact(value, policies=policies)
         return {"redacted": result["redacted_text"], "applied": result["applied"]}
     if isinstance(value, list):
         applied = []
         redacted_items = []
         for item in value:
-            result = dlp_redact_recursive(item)
+            result = dlp_redact_recursive(item, policies=policies)
             redacted_items.append(result["redacted"])
             _merge_applied(applied, result["applied"])
         return {"redacted": redacted_items, "applied": applied}
@@ -215,17 +273,17 @@ def dlp_redact_recursive(value):
         applied = []
         redacted_dict = {}
         for key, item in value.items():
-            result = dlp_redact_recursive(item)
+            result = dlp_redact_recursive(item, policies=policies)
             redacted_dict[key] = result["redacted"]
             _merge_applied(applied, result["applied"])
         return {"redacted": redacted_dict, "applied": applied}
     return {"redacted": value, "applied": []}
 
-def dlp_redact_message(message):
+def dlp_redact_message(message, policies=None):
     if not isinstance(message, dict):
         return {"message": message, "applied": []}
     redacted_message = copy.deepcopy(message)
-    result = dlp_redact_recursive(redacted_message.get("content"))
+    result = dlp_redact_recursive(redacted_message.get("content"), policies=policies)
     redacted_message["content"] = result["redacted"]
     return {"message": redacted_message, "applied": result["applied"]}
 
@@ -295,13 +353,46 @@ async def log_audit_event(actor_role, action, target_type=None, target_id=None, 
     except Exception as e:
         log.error(f"audit_log insert failed: {e}")
 
+async def touch_api_key(key_hash):
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("UPDATE api_keys SET last_used_at = now() WHERE key_hash = $1", key_hash)
+    except Exception as exc:
+        log.warning(f"api key last_used_at update failed: {exc}")
+
+
 async def resolve_api_key(api_key):
-    if not api_key: return (None, None)
+    if not api_key:
+        return {"ok": False, "reason": "missing"}
     h = hash_api_key(api_key)
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT user_id, team_id FROM api_keys WHERE key_hash=$1 AND revoked_at IS NULL", h)
-    return (row["user_id"], row["team_id"]) if row else (None, None)
+            """
+            SELECT k.key_hash,
+                   k.user_id,
+                   COALESCE(t.team_key, k.team_id) AS team_id,
+                   k.expires_at,
+                   k.revoked_at,
+                   u.is_active,
+                   u.archived_at
+            FROM api_keys k
+            LEFT JOIN web_users u ON lower(u.email) = lower(k.user_id)
+            LEFT JOIN teams t ON t.id = u.team_id_fk
+            WHERE k.key_hash = $1
+            """,
+            h,
+        )
+    if not row:
+        return {"ok": False, "reason": "invalid"}
+    now = datetime.now(timezone.utc)
+    if row["revoked_at"]:
+        return {"ok": False, "reason": "revoked"}
+    if row["expires_at"] and row["expires_at"] < now:
+        return {"ok": False, "reason": "expired"}
+    if row["is_active"] is False or row["archived_at"]:
+        return {"ok": False, "reason": "user_inactive"}
+    asyncio.create_task(touch_api_key(row["key_hash"]))
+    return {"ok": True, "user_id": row["user_id"], "team_id": row["team_id"], "key_hash": row["key_hash"]}
 
 async def get_budget_status(team_id, user_id):
     async with pool.acquire() as conn:
@@ -312,10 +403,13 @@ async def get_budget_status(team_id, user_id):
                     COALESCE(SUM(cost_usd) FILTER (WHERE ts >= date_trunc('day',   now())), 0) AS day_used
                 FROM llm_usage WHERE team_id = $1 AND blocked_reason IS NULL
             )
-            SELECT b.monthly_limit_usd::float8 AS monthly_limit,
-                   b.daily_limit_usd::float8   AS daily_limit,
+            SELECT COALESCE(t.monthly_limit_usd, b.monthly_limit_usd)::float8 AS monthly_limit,
+                   COALESCE(t.daily_limit_usd, b.daily_limit_usd)::float8 AS daily_limit,
+                   COALESCE(t.alert_threshold_pct, 80)::int AS alert_threshold_pct,
                    u.month_used::float8 AS month_used, u.day_used::float8 AS day_used
-            FROM team_budget b, team_usage u WHERE b.team_id = $1
+            FROM team_usage u
+            LEFT JOIN teams t ON t.team_key = $1 AND t.is_active = TRUE AND t.archived_at IS NULL
+            LEFT JOIN team_budget b ON b.team_id = $1
         """, team_id)
         user_row = await conn.fetchrow("""
             WITH user_usage AS (
@@ -328,6 +422,7 @@ async def get_budget_status(team_id, user_id):
     return {
         "team_monthly_limit": team_row["monthly_limit"] if team_row else None,
         "team_daily_limit":   team_row["daily_limit"]   if team_row else None,
+        "team_alert_threshold_pct": team_row["alert_threshold_pct"] if team_row else 80,
         "team_monthly_used":  (team_row["month_used"] if team_row else 0.0),
         "team_daily_used":    (team_row["day_used"]   if team_row else 0.0),
         "user_monthly_limit": user_row["monthly_limit"] if user_row else None,
@@ -347,6 +442,13 @@ def check_budget(status):
         return ("budget_exceeded_user_monthly",
                 f"Monthly user budget exceeded: used=${status['user_monthly_used']:.4f} / limit=${status['user_monthly_limit']:.4f}", {})
     headers = {"X-Budget-Remaining-Team-Monthly": f"{status['team_monthly_limit'] - status['team_monthly_used']:.4f}"}
+    threshold = (status.get("team_alert_threshold_pct") or 80) / 100.0
+    monthly_ratio = status["team_monthly_used"] / status["team_monthly_limit"] if status["team_monthly_limit"] else 0
+    daily_ratio = status["team_daily_used"] / status["team_daily_limit"] if status["team_daily_limit"] else 0
+    if monthly_ratio >= 0.95 or daily_ratio >= 0.95:
+        headers["X-Budget-Alert"] = "critical"
+    elif monthly_ratio >= threshold or daily_ratio >= threshold:
+        headers["X-Budget-Alert"] = "warning"
     if status["team_daily_limit"] is not None:
         headers["X-Budget-Remaining-Team-Daily"] = f"{status['team_daily_limit'] - status['team_daily_used']:.4f}"
     if status["user_monthly_limit"] is not None:
@@ -370,9 +472,11 @@ async def chat_completions(request: Request):
     body["model"] = routed_model
     if requested_model and requested_model != routed_model:
         log.info(f"routed(openai): team={team_id} {requested_model} -> {routed_model}")
+    dlp_policies = await get_active_dlp_policies()
     text_to_scan = extract_text_openai(body.get("messages"))
-    dlp_hit = dlp_scan(text_to_scan)
-    if dlp_hit:
+    strict_result = dlp_check_strict(text_to_scan, policies=dlp_policies)
+    if strict_result["blocked"]:
+        dlp_hit = strict_result["pattern"]
         blocked_reason = f"dlp_{dlp_hit}"
         log.warning(f"dlp blocked(openai): user={user_id} team={team_id} reason={blocked_reason}")
         await log_usage(user_id, team_id, skill, routed_model, 0, 0, 0.0, None, blocked_reason, 0)
@@ -425,11 +529,18 @@ async def messages(request: Request):
         auth = request.headers.get("authorization", "")
         if auth.lower().startswith("bearer "):
             api_key = auth[7:].strip()
-    user_id, team_id = await resolve_api_key(api_key)
-    if not user_id:
+    auth_result = await resolve_api_key(api_key)
+    if not auth_result["ok"]:
         return JSONResponse(status_code=401, content={
-            "type": "error", "error": {"type": "authentication_error", "message": "Invalid or missing API key"}
+            "type": "error",
+            "error": {
+                "type": "authentication_error",
+                "message": f"Invalid or unavailable API key ({auth_result['reason']})",
+                "reason": auth_result["reason"],
+            },
         })
+    user_id = auth_result["user_id"]
+    team_id = auth_result["team_id"]
     skill = request.headers.get("x-skill")
 
     routed_model = route_model(team_id)
@@ -439,6 +550,7 @@ async def messages(request: Request):
     # - newest user text block: strict block
     # - previous history/system and older blocks packed in the same user message: redact and continue
     messages_list = body.get("messages") or []
+    dlp_policies = await get_active_dlp_policies()
     last_user_idx = find_last_user_message_index(messages_list)
     last_user_turn = messages_list[last_user_idx] if last_user_idx is not None else None
     history_messages = messages_list[:last_user_idx] if last_user_idx is not None else messages_list
@@ -446,12 +558,12 @@ async def messages(request: Request):
     prepared_last_user_turn = last_user_turn
 
     if last_user_turn is not None:
-        prepared = dlp_prepare_current_user_message(last_user_turn)
+        prepared = dlp_prepare_current_user_message(last_user_turn, policies=dlp_policies)
         prepared_last_user_turn = prepared["message"]
         if prepared["applied"]:
             redaction_log.append({"target": "current_user_packed_history", "applied": prepared["applied"]})
 
-        strict_result = dlp_check_strict(prepared["current_text"])
+        strict_result = dlp_check_strict(prepared["current_text"], policies=dlp_policies)
         if strict_result["blocked"]:
             dlp_hit = strict_result["pattern"]
             blocked_reason = f"dlp_{dlp_hit}"
@@ -481,14 +593,14 @@ async def messages(request: Request):
             })
 
     if body.get("system") is not None:
-        sys_result = dlp_redact_recursive(body.get("system"))
+        sys_result = dlp_redact_recursive(body.get("system"), policies=dlp_policies)
         if sys_result["applied"]:
             body["system"] = sys_result["redacted"]
             redaction_log.append({"target": "system", "applied": sys_result["applied"]})
 
     redacted_history = []
     for msg in history_messages:
-        msg_result = dlp_redact_message(msg)
+        msg_result = dlp_redact_message(msg, policies=dlp_policies)
         redacted_history.append(msg_result["message"])
         if msg_result["applied"]:
             role = msg.get("role", "unknown") if isinstance(msg, dict) else "unknown"

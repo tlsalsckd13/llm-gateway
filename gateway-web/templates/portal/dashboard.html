@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Portal{% endblock %}
+{% block heading %}내 대시보드{% endblock %}
+{% block content %}
+<div class="grid gap-4 md:grid-cols-3">
+  <div class="metric-card">
+    <div class="metric-label">최근 30일 호출</div>
+    <div class="metric-value">{{ data.usage.calls or 0 }}</div>
+    <div class="metric-sub">본인 사용량</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">최근 30일 비용</div>
+    <div class="metric-value">${{ "%.4f"|format(data.usage.cost_usd or 0) }}</div>
+    <div class="metric-sub">차단된 호출 제외</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">활성 API Key</div>
+    <div class="metric-value">{{ data.keys.active_keys or 0 }}</div>
+    <div class="metric-sub">총 {{ data.keys.total_keys or 0 }}개</div>
+  </div>
+</div>
+
+<section class="panel mt-6">
+  <div class="panel-title">내 정보</div>
+  <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2">
+    <div class="health-row"><dt>이메일</dt><dd>{{ user.email }}</dd></div>
+    <div class="health-row"><dt>팀</dt><dd>{{ user.team_name or user.team_key or user.team_id }}</dd></div>
+    <div class="health-row"><dt>권한</dt><dd>{{ user.role }}</dd></div>
+    <div class="health-row"><dt>월 예산</dt><dd>{% if data.budget.monthly_limit_usd is not none %}${{ "%.2f"|format(data.budget.monthly_limit_usd) }}{% else %}-{% endif %}</dd></div>
+  </dl>
+</section>
+{% endblock %}

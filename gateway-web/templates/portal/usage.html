@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}내 사용량{% endblock %}
+{% block heading %}내 사용량{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-title">최근 30일</div>
+  <div class="mt-4 grid gap-4 md:grid-cols-3">
+    <div class="metric-card">
+      <div class="metric-label">호출</div>
+      <div class="metric-value">{{ data.usage.calls or 0 }}</div>
+      <div class="metric-sub">건</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">입력 토큰</div>
+      <div class="metric-value">{{ "{:,}".format(data.usage.input_tokens or 0) }}</div>
+      <div class="metric-sub">tokens</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">비용</div>
+      <div class="metric-value">${{ "%.4f"|format(data.usage.cost_usd or 0) }}</div>
+      <div class="metric-sub">USD</div>
+    </div>
+  </div>
+</section>
+{% endblock %}

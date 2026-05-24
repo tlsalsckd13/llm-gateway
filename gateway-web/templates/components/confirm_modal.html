@@ -1,0 +1,15 @@
+{% macro confirm(id, title, body, action, submit_label="확인") -%}
+  <div x-data="{open:false}" class="inline">
+    <button type="button" class="inline-flex h-9 items-center rounded border border-rose-300 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50" x-on:click="open = true" aria-label="{{ title }}">{{ submit_label }}</button>
+    <div x-show="open" class="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" x-cloak>
+      <form method="post" action="{{ action }}" class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
+        <h2 id="{{ id }}" class="text-base font-semibold">{{ title }}</h2>
+        <p class="mt-2 text-sm text-zinc-600">{{ body }}</p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50" x-on:click="open = false">취소</button>
+          <button type="submit" class="inline-flex h-9 items-center rounded bg-rose-600 px-3 text-sm font-medium text-white hover:bg-rose-700">{{ submit_label }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{%- endmacro %}

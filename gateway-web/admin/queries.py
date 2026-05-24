@@ -53,15 +53,22 @@ async def overview(conn):
 async def budget_rows(conn):
     rows = await conn.fetch(
         """
-        SELECT b.team_id,
-               b.monthly_limit_usd::float8 AS monthly_limit_usd,
-               b.daily_limit_usd::float8 AS daily_limit_usd,
+        SELECT COALESCE(t.team_key, b.team_id) AS team_id,
+               COALESCE(t.name, b.team_id) AS name,
+               COALESCE(t.monthly_limit_usd, b.monthly_limit_usd)::float8 AS monthly_limit_usd,
+               COALESCE(t.daily_limit_usd, b.daily_limit_usd)::float8 AS daily_limit_usd,
+               COALESCE(t.alert_threshold_pct, 80)::int AS alert_threshold_pct,
                COALESCE(sum(u.cost_usd) FILTER (WHERE u.ts >= date_trunc('day', now()) AND u.blocked_reason IS NULL), 0)::float8 AS today_used_usd,
                COALESCE(sum(u.cost_usd) FILTER (WHERE u.ts >= date_trunc('month', now()) AND u.blocked_reason IS NULL), 0)::float8 AS month_used_usd
         FROM team_budget b
-        LEFT JOIN llm_usage u ON u.team_id = b.team_id
-        GROUP BY b.team_id, b.monthly_limit_usd, b.daily_limit_usd
-        ORDER BY b.team_id
+        FULL OUTER JOIN teams t ON t.team_key = b.team_id
+        LEFT JOIN llm_usage u ON u.team_id = COALESCE(t.team_key, b.team_id)
+        WHERE COALESCE(t.archived_at IS NULL, TRUE)
+        GROUP BY COALESCE(t.team_key, b.team_id), COALESCE(t.name, b.team_id),
+                 COALESCE(t.monthly_limit_usd, b.monthly_limit_usd),
+                 COALESCE(t.daily_limit_usd, b.daily_limit_usd),
+                 COALESCE(t.alert_threshold_pct, 80)
+        ORDER BY COALESCE(t.team_key, b.team_id)
         """
     )
     items = records(rows)
@@ -78,11 +85,18 @@ async def budget_rows(conn):
 async def key_rows(conn):
     rows = await conn.fetch(
         """
-        SELECT substring(k.key_hash from 1 for 8) AS key_prefix,
-               k.user_id, k.team_id, k.label, k.created_at, k.revoked_at,
+        SELECT COALESCE(k.key_prefix, substring(k.key_hash from 1 for 12)) AS key_prefix,
+               k.user_id,
+               COALESCE(t.team_key, k.team_id) AS team_id,
+               k.label,
+               k.created_at,
+               k.expires_at,
+               k.revoked_at,
                k.issued_via,
-               (SELECT max(u.ts) FROM llm_usage u WHERE u.user_id = k.user_id) AS last_used_at
+               k.last_used_at
         FROM api_keys k
+        LEFT JOIN web_users wu ON lower(wu.email) = lower(k.user_id)
+        LEFT JOIN teams t ON t.id = wu.team_id_fk
         ORDER BY k.created_at DESC
         LIMIT 200
         """
