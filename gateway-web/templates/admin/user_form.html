@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}사용자 초대{% endblock %}
+{% block heading %}사용자 초대{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">신규 사용자 초대</div>
+  {% if errors.form %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+  {% endif %}
+  <form method="post" action="/admin/users" class="mt-5 grid gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block text-sm font-medium" for="email">Email</label>
+        <input id="email" name="email" type="email" value="{{ values.email or '' }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.email %}<p class="mt-1 text-sm text-rose-700">{{ errors.email }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="display_name">이름</label>
+        <input id="display_name" name="display_name" value="{{ values.display_name or '' }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.display_name %}<p class="mt-1 text-sm text-rose-700">{{ errors.display_name }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block text-sm font-medium" for="role">권한</label>
+        <select id="role" name="role" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% for role in roles %}<option value="{{ role }}" {% if values.role == role %}selected{% endif %}>{{ role }}</option>{% endfor %}
+        </select>
+        {% if errors.role %}<p class="mt-1 text-sm text-rose-700">{{ errors.role }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="team_id_fk">팀</label>
+        <select id="team_id_fk" name="team_id_fk" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% for team in teams %}<option value="{{ team.id }}" {% if values.team_id_fk|string == team.id|string %}selected{% endif %}>{{ team.name }}</option>{% endfor %}
+        </select>
+        {% if errors.team_id_fk %}<p class="mt-1 text-sm text-rose-700">{{ errors.team_id_fk }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block text-sm font-medium" for="department">부서</label>
+        <input id="department" name="department" value="{{ values.department or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="hire_date">입사일</label>
+        <input id="hire_date" name="hire_date" type="date" value="{{ values.hire_date or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.hire_date %}<p class="mt-1 text-sm text-rose-700">{{ errors.hire_date }}</p>{% endif %}
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="manager_user_id">매니저</label>
+      <select id="manager_user_id" name="manager_user_id" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        <option value="">없음</option>
+        {% for manager in managers %}<option value="{{ manager.id }}" {% if values.manager_user_id|string == manager.id|string %}selected{% endif %}>{{ manager.display_name }} ({{ manager.email }})</option>{% endfor %}
+      </select>
+      {% if errors.manager_user_id %}<p class="mt-1 text-sm text-rose-700">{{ errors.manager_user_id }}</p>{% endif %}
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="/admin/users" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+      <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">초대 링크 발급</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

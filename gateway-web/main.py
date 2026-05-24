@@ -13,6 +13,8 @@ from admin.routes_api import router as admin_api_router
 from admin.routes_pages import router as admin_pages_router
 from admin.teams import api_router as team_api_router
 from admin.teams import page_router as team_page_router
+from admin.users import api_router as user_api_router
+from admin.users import page_router as user_page_router
 from auth.middleware import attach_auth_middleware
 from auth.routes import router as auth_router
 from portal.routes_api import router as portal_api_router
@@ -76,6 +78,8 @@ app.include_router(admin_pages_router)
 app.include_router(admin_api_router)
 app.include_router(team_page_router)
 app.include_router(team_api_router)
+app.include_router(user_page_router)
+app.include_router(user_api_router)
 app.include_router(portal_pages_router)
 app.include_router(portal_api_router)
 

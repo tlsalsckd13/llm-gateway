@@ -43,3 +43,32 @@ async def consume_magic_link(conn, token: str, purpose: str):
         purpose,
     )
     return row["user_id"] if row else None
+
+
+async def get_magic_link(conn, token: str, purpose: str):
+    row = await conn.fetchrow(
+        """
+        SELECT m.token_hash,
+               m.user_id,
+               m.purpose,
+               m.issued_at,
+               m.expires_at,
+               m.consumed_at,
+               u.email,
+               u.display_name
+        FROM magic_link_tokens m
+        JOIN web_users u ON u.id = m.user_id
+        WHERE m.token_hash = $1
+          AND m.purpose = $2
+        """,
+        token_hash(token),
+        purpose,
+    )
+    return dict(row) if row else None
+
+
+def magic_link_is_usable(row) -> bool:
+    if not row:
+        return False
+    now = datetime.now(timezone.utc)
+    return row["consumed_at"] is None and row["expires_at"] > now

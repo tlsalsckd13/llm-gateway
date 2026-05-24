@@ -112,9 +112,10 @@ def attach_auth_middleware(app):
         if public:
             return await call_next(request)
 
+        logout_path = path == "/admin/logout"
         admin_path = path.startswith("/admin/") or path == "/admin" or path.startswith("/api/admin/")
         portal_path = path.startswith("/portal/") or path == "/portal" or path.startswith("/api/portal/")
-        protected = admin_path or portal_path
+        protected = admin_path or portal_path or logout_path
         if not protected:
             return await call_next(request)
 
@@ -125,7 +126,7 @@ def attach_auth_middleware(app):
             if path.startswith("/api/"):
                 return JSONResponse(status_code=401, content={"error": "unauthorized"})
             return RedirectResponse("/admin/login", status_code=302)
-        if admin_path and session["role"] != "admin":
+        if admin_path and not logout_path and session["role"] != "admin":
             if path.startswith("/api/"):
                 return JSONResponse(status_code=403, content={"error": "forbidden"})
             return JSONResponse(status_code=403, content={"error": "권한이 없습니다"})

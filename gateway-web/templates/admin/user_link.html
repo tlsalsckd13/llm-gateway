@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">{{ user_record.display_name }} &lt;{{ user_record.email }}&gt;</div>
+  <p class="mt-2 text-sm text-zinc-600">아래 링크는 화면에서 1회만 확인하는 용도로 사용하세요.</p>
+  <div class="mt-4 rounded border border-zinc-200 bg-zinc-50 p-3">
+    <code class="break-all text-sm">{{ link_url }}</code>
+  </div>
+  <div class="mt-5 flex gap-2">
+    <a href="/admin/users/{{ user_record.id }}" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">사용자 상세</a>
+    <a href="/admin/users" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">목록</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ user_record.display_name }}{% endblock %}
+{% block heading %}{{ user_record.display_name }}{% endblock %}
+{% block content %}
+{% if errors.form %}
+  <div class="mb-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+{% endif %}
+
+<div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+  <section class="panel">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="panel-title">기본 정보</div>
+        <div class="mt-1 text-sm text-zinc-500">{{ user_record.email }}</div>
+      </div>
+      <span class="rounded px-2 py-1 text-xs font-medium {% if user_record.archived_at %}bg-zinc-100 text-zinc-600{% elif user_record.locked_until %}bg-amber-50 text-amber-700{% elif user_record.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-rose-50 text-rose-700{% endif %}">
+        {% if user_record.archived_at %}archived{% elif user_record.locked_until %}locked{% elif user_record.is_active %}active{% else %}inactive{% endif %}
+      </span>
+    </div>
+
+    <form method="post" action="/admin/users/{{ user_record.id }}" class="mt-5 grid gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium" for="display_name">이름</label>
+          <input id="display_name" name="display_name" value="{{ user_record.display_name }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.display_name %}<p class="mt-1 text-sm text-rose-700">{{ errors.display_name }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="role">권한</label>
+          <select id="role" name="role" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+            {% for role in roles %}<option value="{{ role }}" {% if user_record.role == role %}selected{% endif %}>{{ role }}</option>{% endfor %}
+          </select>
+          {% if errors.role %}<p class="mt-1 text-sm text-rose-700">{{ errors.role }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium" for="team_id_fk">팀</label>
+          <select id="team_id_fk" name="team_id_fk" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+            {% for team in teams %}<option value="{{ team.id }}" {% if user_record.team_id_fk|string == team.id|string %}selected{% endif %}>{{ team.name }}</option>{% endfor %}
+          </select>
+          {% if errors.team_id_fk %}<p class="mt-1 text-sm text-rose-700">{{ errors.team_id_fk }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="department">부서</label>
+          <input id="department" name="department" value="{{ user_record.department or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium" for="hire_date">입사일</label>
+          <input id="hire_date" name="hire_date" type="date" value="{{ user_record.hire_date or '' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.hire_date %}<p class="mt-1 text-sm text-rose-700">{{ errors.hire_date }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="manager_user_id">매니저</label>
+          <select id="manager_user_id" name="manager_user_id" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+            <option value="">없음</option>
+            {% for manager in managers %}<option value="{{ manager.id }}" {% if user_record.manager_user_id|string == manager.id|string %}selected{% endif %}>{{ manager.display_name }} ({{ manager.email }})</option>{% endfor %}
+          </select>
+          {% if errors.manager_user_id %}<p class="mt-1 text-sm text-rose-700">{{ errors.manager_user_id }}</p>{% endif %}
+        </div>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_active" value="true" {% if user_record.is_active %}checked{% endif %} class="h-4 w-4 rounded border-zinc-300">
+        활성 상태
+      </label>
+
+      <div class="flex justify-end">
+        <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">저장</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="grid gap-4">
+    <div class="metric-card">
+      <div class="metric-label">최근 30일 호출</div>
+      <div class="metric-value">{{ usage.calls or 0 }}</div>
+      <div class="metric-sub">${{ "%.4f"|format(usage.cost_usd or 0) }}</div>
+    </div>
+    <section class="panel">
+      <div class="panel-title text-rose-700">계정 액션</div>
+      <div class="mt-4 grid gap-2">
+        <form method="post" action="/admin/users/{{ user_record.id }}/reset-password-link">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">비밀번호 재설정 링크</button>
+        </form>
+        <form method="post" action="/admin/users/{{ user_record.id }}/unlock">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">잠금 해제</button>
+        </form>
+        <form method="post" action="/admin/users/{{ user_record.id }}/deactivate">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded border border-rose-300 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50">비활성화</button>
+        </form>
+        <form method="post" action="/admin/users/{{ user_record.id }}/archive">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded bg-rose-600 px-3 text-sm font-medium text-white hover:bg-rose-700">Archive</button>
+        </form>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<section class="panel mt-6">
+  <div class="panel-title">API Keys</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">사용자 API Key 목록</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">Label</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+      {% for key in keys %}
+        <tr>
+          <td><code>{{ key.key_prefix }}</code></td>
+          <td>{{ key.label or "-" }}</td>
+          <td>{{ key.created_at }}</td>
+          <td>{{ key.expires_at or "-" }}</td>
+          <td>{{ key.last_used_at or "-" }}</td>
+          <td>{% if key.revoked_at %}revoked{% else %}active{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">API Key가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">최근 활동 로그</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">사용자 활동 로그</caption>
+      <thead><tr><th scope="col">Time</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th></tr></thead>
+      <tbody>
+      {% for event in audit %}
+        <tr>
+          <td>{{ event.created_at }}</td>
+          <td>{{ event.actor_role }}{% if event.actor_user_id %} #{{ event.actor_user_id }}{% endif %}</td>
+          <td>{{ event.action }}</td>
+          <td>{{ event.target_type or "-" }} {{ event.target_id or "" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">활동 로그가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

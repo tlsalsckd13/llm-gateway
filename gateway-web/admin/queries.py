@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 
@@ -7,7 +7,7 @@ def encode(value):
         return [encode(v) for v in value]
     if isinstance(value, dict):
         return {k: encode(v) for k, v in value.items()}
-    if isinstance(value, datetime):
+    if isinstance(value, (date, datetime)):
         return value.isoformat()
     if isinstance(value, Decimal):
         return float(value)
