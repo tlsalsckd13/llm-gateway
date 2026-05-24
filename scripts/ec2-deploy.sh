@@ -103,9 +103,22 @@ sudo -E docker compose pull
 sudo -E docker compose up -d --remove-orphans
 sudo docker compose ps
 
-curl -sf http://localhost:8080/health
-curl -sf http://127.0.0.1:8090/healthz
-curl -skf https://localhost/healthz
+retry_curl() {
+  url="$1"
+  extra="${2:-}"
+  for i in $(seq 1 30); do
+    if curl -sf $extra "$url"; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "health check failed: $url"
+  return 1
+}
+
+retry_curl http://localhost:8080/health
+retry_curl http://127.0.0.1:8090/healthz
+retry_curl https://localhost/healthz "-k"
 
 for container in usage-collector gateway-web nginx-proxy; do
   running="$(sudo docker inspect "$container" --format '{{.State.Running}}')"
