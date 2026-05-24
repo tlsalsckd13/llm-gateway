@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Teams{% endblock %}
+{% block heading %}Teams{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">팀 관리</div>
+      <div class="mt-1 text-sm text-zinc-500">총 {{ teams.total }}개 팀</div>
+    </div>
+    <a href="/admin/teams/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800" aria-label="팀 추가">팀 추가</a>
+  </div>
+
+  <form method="get" action="/admin/teams" class="mt-4 flex flex-wrap gap-2">
+    <label class="sr-only" for="q">검색</label>
+    <input id="q" name="q" value="{{ q }}" placeholder="team_key 또는 이름 검색" class="h-10 min-w-72 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+    <label class="sr-only" for="sort">정렬</label>
+    <select id="sort" name="sort" class="h-10 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      <option value="name" {% if sort == "name" %}selected{% endif %}>이름순</option>
+      <option value="created_at" {% if sort == "created_at" %}selected{% endif %}>최근 생성순</option>
+      <option value="user_count" {% if sort == "user_count" %}selected{% endif %}>사용자 많은 순</option>
+    </select>
+    <button type="submit" class="inline-flex h-10 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">검색</button>
+  </form>
+
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 목록</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Team Key</th>
+          <th scope="col">Name</th>
+          <th scope="col">Users</th>
+          <th scope="col">Month</th>
+          <th scope="col">Monthly Limit</th>
+          <th scope="col">Daily Limit</th>
+          <th scope="col">Status</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for team in teams.items %}
+        <tr class="{% if team.monthly_pct >= team.alert_threshold_pct %}row-warn{% endif %}">
+          <td>{{ team.id }}</td>
+          <td><code>{{ team.team_key }}</code></td>
+          <td>
+            <div class="font-medium">{{ team.name }}</div>
+            {% if team.description %}<div class="mt-1 text-xs text-zinc-500">{{ team.description }}</div>{% endif %}
+          </td>
+          <td>{{ team.user_count }}</td>
+          <td>${{ "%.4f"|format(team.month_used_usd) }} ({{ "%.1f"|format(team.monthly_pct) }}%)</td>
+          <td>${{ "%.2f"|format(team.monthly_limit_usd) }}</td>
+          <td>${{ "%.2f"|format(team.daily_limit_usd) }}</td>
+          <td>{% if team.is_active %}active{% else %}inactive{% endif %}</td>
+          <td><a href="/admin/teams/{{ team.id }}" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">상세</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="empty">팀이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if teams.has_prev or teams.has_next %}
+  <nav class="mt-4 flex justify-end gap-2 text-sm" aria-label="페이지">
+    {% if teams.has_prev %}<a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="/admin/teams?page={{ teams.page - 1 }}&q={{ q }}&sort={{ sort }}">이전</a>{% endif %}
+    <span class="inline-flex h-9 items-center px-2">{{ teams.page }}</span>
+    {% if teams.has_next %}<a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="/admin/teams?page={{ teams.page + 1 }}&q={{ q }}&sort={{ sort }}">다음</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

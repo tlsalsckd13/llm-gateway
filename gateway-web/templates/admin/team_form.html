@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}팀 추가{% endblock %}
+{% block heading %}팀 추가{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">신규 팀</div>
+  {% if errors.form %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+  {% endif %}
+  <form method="post" action="/admin/teams" class="mt-5 grid gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label class="block text-sm font-medium" for="team_key">Team Key</label>
+      <input id="team_key" name="team_key" value="{{ values.team_key or '' }}" required pattern="[a-z0-9-]+" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.team_key %}<p class="mt-1 text-sm text-rose-700">{{ errors.team_key }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="name">이름</label>
+      <input id="name" name="name" value="{{ values.name or '' }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      {% if errors.name %}<p class="mt-1 text-sm text-rose-700">{{ errors.name }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="description">설명</label>
+      <textarea id="description" name="description" rows="3" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ values.description or '' }}</textarea>
+    </div>
+    <div>
+      <label class="block text-sm font-medium" for="default_model">기본 모델</label>
+      <select id="default_model" name="default_model" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% for model in models %}
+        <option value="{{ model }}" {% if values.default_model == model %}selected{% endif %}>{{ model }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.default_model %}<p class="mt-1 text-sm text-rose-700">{{ errors.default_model }}</p>{% endif %}
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+      <div>
+        <label class="block text-sm font-medium" for="monthly_limit_usd">월 예산 USD</label>
+        <input id="monthly_limit_usd" name="monthly_limit_usd" type="number" min="0" step="0.0001" value="{{ values.monthly_limit_usd or '0' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.monthly_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ errors.monthly_limit_usd }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="daily_limit_usd">일 예산 USD</label>
+        <input id="daily_limit_usd" name="daily_limit_usd" type="number" min="0" step="0.0001" value="{{ values.daily_limit_usd or '0' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.daily_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ errors.daily_limit_usd }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="alert_threshold_pct">알림 임계값 %</label>
+        <input id="alert_threshold_pct" name="alert_threshold_pct" type="number" min="1" max="100" value="{{ values.alert_threshold_pct or '80' }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.alert_threshold_pct %}<p class="mt-1 text-sm text-rose-700">{{ errors.alert_threshold_pct }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="/admin/teams" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+      <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">생성</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }}{% endblock %}
+{% block heading %}{{ team.name }}{% endblock %}
+{% block content %}
+{% if errors.form %}
+  <div class="mb-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+{% endif %}
+
+<div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+  <section class="panel">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="panel-title">기본 정보</div>
+        <div class="mt-1 text-sm text-zinc-500"><code>{{ team.team_key }}</code></div>
+      </div>
+      <span class="rounded px-2 py-1 text-xs font-medium {% if team.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-zinc-100 text-zinc-600{% endif %}">
+        {% if team.is_active %}active{% else %}inactive{% endif %}
+      </span>
+    </div>
+
+    <form method="post" action="/admin/teams/{{ team.id }}" class="mt-5 grid gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-sm font-medium" for="name">이름</label>
+        <input id="name" name="name" value="{{ team.name }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.name %}<p class="mt-1 text-sm text-rose-700">{{ errors.name }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="description">설명</label>
+        <textarea id="description" name="description" rows="3" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ team.description or '' }}</textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="default_model">기본 모델</label>
+        <select id="default_model" name="default_model" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% for model in models %}
+          <option value="{{ model }}" {% if team.default_model == model %}selected{% endif %}>{{ model }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.default_model %}<p class="mt-1 text-sm text-rose-700">{{ errors.default_model }}</p>{% endif %}
+      </div>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label class="block text-sm font-medium" for="monthly_limit_usd">월 예산 USD</label>
+          <input id="monthly_limit_usd" name="monthly_limit_usd" type="number" min="0" step="0.0001" value="{{ team.monthly_limit_usd }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.monthly_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ errors.monthly_limit_usd }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="daily_limit_usd">일 예산 USD</label>
+          <input id="daily_limit_usd" name="daily_limit_usd" type="number" min="0" step="0.0001" value="{{ team.daily_limit_usd }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.daily_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ errors.daily_limit_usd }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="alert_threshold_pct">알림 임계값 %</label>
+          <input id="alert_threshold_pct" name="alert_threshold_pct" type="number" min="1" max="100" value="{{ team.alert_threshold_pct }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.alert_threshold_pct %}<p class="mt-1 text-sm text-rose-700">{{ errors.alert_threshold_pct }}</p>{% endif %}
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="change_reason">예산 변경 사유</label>
+        <input id="change_reason" name="change_reason" placeholder="예산 값을 바꾸는 경우 필수" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.change_reason %}<p class="mt-1 text-sm text-rose-700">{{ errors.change_reason }}</p>{% endif %}
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_active" value="true" {% if team.is_active %}checked{% endif %} class="h-4 w-4 rounded border-zinc-300">
+        활성 상태
+      </label>
+      <div class="flex justify-end">
+        <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">저장</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="grid gap-4">
+    <div class="metric-card">
+      <div class="metric-label">이번 달 비용</div>
+      <div class="metric-value">${{ "%.4f"|format(team.month_used_usd) }}</div>
+      <div class="metric-sub">{{ team.month_calls }} calls</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">사용자</div>
+      <div class="metric-value">{{ team.user_count }}</div>
+      <div class="metric-sub">활성/미보관 사용자</div>
+    </div>
+    <section class="panel">
+      <div class="panel-title text-rose-700">위험 액션</div>
+      <p class="mt-2 text-sm text-zinc-600">사용자가 없는 팀만 archive할 수 있습니다.</p>
+      <form method="post" action="/admin/teams/{{ team.id }}/archive" class="mt-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="inline-flex h-9 items-center rounded border border-rose-300 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50" aria-label="팀 archive">Archive</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<section class="panel mt-6">
+  <div class="panel-title">사용자</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 사용자 목록</caption>
+      <thead><tr><th scope="col">Email</th><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Department</th><th scope="col">Status</th><th scope="col">Last Login</th></tr></thead>
+      <tbody>
+      {% for row in users %}
+        <tr>
+          <td>{{ row.email }}</td>
+          <td>{{ row.display_name }}</td>
+          <td>{{ row.role }}</td>
+          <td>{{ row.department or "-" }}</td>
+          <td>{% if row.is_active %}active{% else %}inactive{% endif %}</td>
+          <td>{{ row.last_login_at or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">이 팀에 속한 사용자가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">API Keys</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 API Key 목록</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">User</th><th scope="col">Label</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last Used</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+      {% for key in keys %}
+        <tr>
+          <td><code>{{ key.key_prefix }}</code></td>
+          <td>{{ key.user_id }}</td>
+          <td>{{ key.label or "-" }}</td>
+          <td>{{ key.created_at }}</td>
+          <td>{{ key.expires_at or "-" }}</td>
+          <td>{{ key.last_used_at or "-" }}</td>
+          <td>{% if key.revoked_at %}revoked{% else %}active{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">이 팀의 API Key가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">예산 변경 이력</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 예산 변경 이력</caption>
+      <thead><tr><th scope="col">Time</th><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th><th scope="col">Actor</th><th scope="col">Reason</th></tr></thead>
+      <tbody>
+      {% for row in history %}
+        <tr>
+          <td>{{ row.changed_at }}</td>
+          <td>{{ row.field }}</td>
+          <td>{{ row.old_value }}</td>
+          <td>{{ row.new_value }}</td>
+          <td>{{ row.changed_by_user_id or "-" }}</td>
+          <td>{{ row.reason or "-" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">예산 변경 이력이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
