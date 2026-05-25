@@ -140,6 +140,9 @@ jobs:
           curl -sf http://localhost:8080/health >/dev/null
           curl -sf http://127.0.0.1:8090/healthz >/dev/null
           curl -skf https://localhost/healthz >/dev/null
+          check_status http://localhost/admin/login 200
+          check_status http://localhost/portal/keys/new 302
+          check_status http://localhost/auth/reset-password 403
           check_status https://localhost/admin/login 200 -k
           check_status https://localhost/portal/keys/new 302 -k
           check_status https://localhost/auth/reset-password 403 -k

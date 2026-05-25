@@ -33,24 +33,7 @@ if [ ! -s /opt/llm-gateway/nginx/certs/server.crt ] || [ ! -s /opt/llm-gateway/n
   sudo chmod 644 /opt/llm-gateway/nginx/certs/server.crt
 fi
 
-sudo tee /opt/llm-gateway/nginx/conf.d/gateway.conf >/dev/null <<'NGINX'
-upstream collector { server usage-collector:8080; }
-upstream web       { server gateway-web:8090; }
-
-server {
-    listen 80;
-    server_name _;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name _;
-
-    ssl_certificate     /etc/nginx/certs/server.crt;
-    ssl_certificate_key /etc/nginx/certs/server.key;
-    ssl_protocols       TLSv1.2 TLSv1.3;
-
+sudo tee /opt/llm-gateway/nginx/conf.d/gateway.locations >/dev/null <<'NGINX'
     client_max_body_size 4m;
 
     location /v1/ {
@@ -111,6 +94,27 @@ server {
         return 200 "ok\n";
         add_header Content-Type text/plain;
     }
+NGINX
+
+sudo tee /opt/llm-gateway/nginx/conf.d/gateway.conf >/dev/null <<'NGINX'
+upstream collector { server usage-collector:8080; }
+upstream web       { server gateway-web:8090; }
+
+server {
+    listen 80;
+    server_name _;
+    include /etc/nginx/conf.d/gateway.locations;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/server.crt;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    include /etc/nginx/conf.d/gateway.locations;
 }
 NGINX
 
@@ -154,6 +158,9 @@ retry_status() {
 retry_curl http://localhost:8080/health
 retry_curl http://127.0.0.1:8090/healthz
 retry_curl https://localhost/healthz "-k"
+retry_status http://localhost/admin/login 200
+retry_status http://localhost/portal/keys/new 302
+retry_status http://localhost/auth/reset-password 403
 retry_status https://localhost/admin/login 200 "-k"
 retry_status https://localhost/portal/keys/new 302 "-k"
 retry_status https://localhost/auth/reset-password 403 "-k"
