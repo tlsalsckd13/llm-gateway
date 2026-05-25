@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 
 import asyncpg
 from fastapi import APIRouter, HTTPException, Request
@@ -14,6 +15,7 @@ from common.validation import parse_alert_threshold, parse_money, validate_team_
 
 page_router = APIRouter(prefix="/admin")
 api_router = APIRouter(prefix="/api/admin")
+log = logging.getLogger(__name__)
 
 BEDROCK_MODELS = [
     "global.anthropic.claude-opus-4-7",
@@ -410,8 +412,11 @@ async def team_create_post(request: Request):
             team = await create_team_record(conn, payload, actor_id)
         except asyncpg.UniqueViolationError:
             return csrf_response(request, "admin/team_form.html", ctx(request, "teams", mode="new", values=dict(form), errors={"team_key": "이미 존재하는 team_key입니다."}), status_code=409)
-    await write_audit(request, "team.create", target_type="team", target_id=team["team_key"], metadata={"after": encode(team)})
-    response = RedirectResponse(f"/admin/teams/{team['id']}", status_code=302)
+    try:
+        await write_audit(request, "team.create", target_type="team", target_id=team["team_key"], metadata={"after": encode(team)})
+    except Exception:
+        log.exception("team create audit failed: team=%s", team["team_key"])
+    response = RedirectResponse("/admin/teams", status_code=302)
     response.delete_cookie(CSRF_COOKIE, path="/admin")
     return set_flash(response, request.app.state.session_secret, "팀이 생성되었습니다.")
 

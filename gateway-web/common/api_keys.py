@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timezone
 
 
-API_KEY_PREFIX = "kcs-poc-"
+API_KEY_PREFIX = "ai-poc-"
 
 
 def generate_api_key() -> str:

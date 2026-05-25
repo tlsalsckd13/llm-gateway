@@ -13,7 +13,7 @@ def template_env():
 
 def test_generate_api_key_hash_and_prefix():
     key = generate_api_key()
-    assert key.startswith("kcs-poc-")
+    assert key.startswith("ai-poc-")
     assert len(hash_api_key(key)) == 64
     assert display_prefix(key) == key[:18]
 
@@ -32,7 +32,7 @@ def test_admin_keys_template_renders_actions():
         keys=[
             {
                 "key_hash": "abc",
-                "key_prefix": "kcs-poc-123",
+                "key_prefix": "ai-poc-123",
                 "user_id": "user@example.com",
                 "team_id": "infra",
                 "label": "local",
@@ -57,7 +57,7 @@ def test_portal_keys_template_renders_actions():
         keys=[
             {
                 "key_hash": "abc",
-                "key_prefix": "kcs-poc-123",
+                "key_prefix": "ai-poc-123",
                 "label": "local",
                 "created_at": "now",
                 "expires_at": None,
