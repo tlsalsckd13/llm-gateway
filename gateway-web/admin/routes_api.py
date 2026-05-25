@@ -82,12 +82,6 @@ async def usage_csv(request: Request):
     )
 
 
-@router.get("/budgets")
-async def budgets(request: Request):
-    async with request.app.state.db.acquire() as conn:
-        return {"items": await queries.budget_rows(conn)}
-
-
 @router.get("/keys")
 async def keys(request: Request):
     async with request.app.state.db.acquire() as conn:

@@ -29,13 +29,6 @@ async def usage_page(request: Request):
     return request.app.state.templates.TemplateResponse("admin/usage.html", ctx(request, "usage", data=data))
 
 
-@router.get("/budgets")
-async def budgets_page(request: Request):
-    async with request.app.state.db.acquire() as conn:
-        data = await queries.budget_rows(conn)
-    return request.app.state.templates.TemplateResponse("admin/budgets.html", ctx(request, "budgets", budgets=data))
-
-
 @router.get("/keys")
 async def keys_page(request: Request):
     async with request.app.state.db.acquire() as conn:

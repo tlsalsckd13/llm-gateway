@@ -2,21 +2,86 @@
 {% block title %}Budgets{% endblock %}
 {% block heading %}Budgets{% endblock %}
 {% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/budgets" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'teams' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Teams</a>
+  <a href="/admin/budgets/users" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'users' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Users</a>
+  <a href="/admin/budgets/history" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'history' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">History</a>
+</div>
+
 <section class="panel">
-  <div class="panel-title">Team Budget Status</div>
+  <div class="flex items-center justify-between gap-3">
+    <div class="panel-title">Team Budgets</div>
+    <div class="text-sm text-zinc-500">{{ budgets|length }} teams</div>
+  </div>
+  {% if errors.form %}<div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>{% endif %}
   <div class="table-wrap mt-4">
     <table class="data-table">
-      <thead><tr><th>Team</th><th>Today</th><th>Daily Limit</th><th>Daily %</th><th>Month</th><th>Monthly Limit</th><th>Monthly %</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th>Today</th>
+          <th>Daily Limit</th>
+          <th>Month</th>
+          <th>Monthly Limit</th>
+          <th>Alert</th>
+          <th>Action</th>
+        </tr>
+      </thead>
       <tbody>
       {% for row in budgets %}
-        <tr class="{% if row.daily_pct >= 80 or row.monthly_pct >= 80 %}row-warn{% endif %}">
-          <td class="font-medium">{{ row.team_id }}</td>
-          <td>${{ "%.4f"|format(row.today_used_usd) }}</td>
-          <td>{% if row.daily_limit_usd %}${{ "%.2f"|format(row.daily_limit_usd) }}{% else %}-{% endif %}</td>
-          <td>{{ "%.1f"|format(row.daily_pct) }}%</td>
-          <td>${{ "%.4f"|format(row.month_used_usd) }}</td>
+        {% set row_errors = errors.get(row.id) if errors else none %}
+        <tr class="{% if row.alert_level == 'critical' %}bg-rose-50{% elif row.alert_level == 'warning' %}row-warn{% endif %}">
+          <td>
+            <div class="font-medium">{{ row.name }}</div>
+            <div class="mt-1 text-xs text-zinc-500">{{ row.team_key }}</div>
+          </td>
+          <td>
+            <div>${{ "%.4f"|format(row.today_used_usd) }}</div>
+            <div class="mt-1 text-xs text-zinc-500">{{ "%.1f"|format(row.daily_pct) }}%</div>
+          </td>
+          <td>{% if row.daily_limit_usd is not none %}${{ "%.2f"|format(row.daily_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>
+            <div>${{ "%.4f"|format(row.month_used_usd) }}</div>
+            <div class="mt-1 text-xs text-zinc-500">{{ "%.1f"|format(row.monthly_pct) }}%</div>
+          </td>
           <td>${{ "%.2f"|format(row.monthly_limit_usd) }}</td>
-          <td>{{ "%.1f"|format(row.monthly_pct) }}%</td>
+          <td>{{ row.alert_threshold_pct }}%</td>
+          <td>
+            <div x-data="{ open: {{ 'true' if row_errors else 'false' }} }" class="relative">
+              <button type="button" @click="open = true" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">수정</button>
+              <div x-cloak x-show="open" class="fixed inset-0 z-30 bg-black/30" @click="open = false"></div>
+              <div x-cloak x-show="open" class="fixed left-1/2 top-1/2 z-40 w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-5 shadow-xl">
+                <div class="text-base font-semibold">{{ row.name }}</div>
+                <form method="post" action="/admin/budgets/teams/{{ row.id }}" class="mt-4 grid gap-4">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div>
+                    <label class="block text-sm font-medium" for="monthly-{{ row.id }}">월 예산 USD</label>
+                    <input id="monthly-{{ row.id }}" name="monthly_limit_usd" type="number" min="0" step="0.0001" value="{{ row.monthly_limit_usd }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+                    {% if row_errors and row_errors.monthly_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.monthly_limit_usd }}</p>{% endif %}
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium" for="daily-{{ row.id }}">일 예산 USD</label>
+                    <input id="daily-{{ row.id }}" name="daily_limit_usd" type="number" min="0" step="0.0001" value="{{ row.daily_limit_usd }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+                    {% if row_errors and row_errors.daily_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.daily_limit_usd }}</p>{% endif %}
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium" for="threshold-{{ row.id }}">알림 임계값 %</label>
+                    <input id="threshold-{{ row.id }}" name="alert_threshold_pct" type="number" min="1" max="100" step="1" value="{{ row.alert_threshold_pct }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+                    {% if row_errors and row_errors.alert_threshold_pct %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.alert_threshold_pct }}</p>{% endif %}
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium" for="reason-{{ row.id }}">변경 사유</label>
+                    <textarea id="reason-{{ row.id }}" name="reason" rows="3" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"></textarea>
+                    {% if row_errors and row_errors.reason %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.reason }}</p>{% endif %}
+                  </div>
+                  <div class="flex justify-end gap-2">
+                    <button type="button" @click="open = false" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</button>
+                    <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">저장</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </td>
         </tr>
       {% else %}
         <tr><td colspan="7" class="empty">No budget rows</td></tr>

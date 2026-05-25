@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}User Budgets{% endblock %}
+{% block heading %}Budgets{% endblock %}
+{% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/budgets" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'teams' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Teams</a>
+  <a href="/admin/budgets/users" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'users' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Users</a>
+  <a href="/admin/budgets/history" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'history' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">History</a>
+</div>
+
+<section class="panel">
+  <div class="flex items-center justify-between gap-3">
+    <div class="panel-title">User Budget Overrides</div>
+    <div class="text-sm text-zinc-500">{{ users|length }} users</div>
+  </div>
+  {% if errors.form %}<div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>{% endif %}
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Team</th>
+          <th>User Usage</th>
+          <th>User Override</th>
+          <th>Team Limit</th>
+          <th>Effective %</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in users %}
+        {% set row_errors = errors.get(row.id) if errors else none %}
+        <tr class="{% if row.alert_level == 'critical' %}bg-rose-50{% elif row.alert_level == 'warning' %}row-warn{% endif %}">
+          <td>
+            <div class="font-medium">{{ row.display_name or row.email }}</div>
+            <div class="mt-1 text-xs text-zinc-500">{{ row.email }}</div>
+          </td>
+          <td>{{ row.team_name or row.team_id or "-" }}</td>
+          <td>${{ "%.4f"|format(row.user_month_used_usd) }}</td>
+          <td>{% if row.has_user_override and row.user_monthly_limit_usd is not none %}${{ "%.2f"|format(row.user_monthly_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{% if row.team_monthly_limit_usd is not none %}${{ "%.2f"|format(row.team_monthly_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{{ "%.1f"|format(row.effective_monthly_pct) }}%</td>
+          <td>
+            <div x-data="{ open: {{ 'true' if row_errors else 'false' }} }" class="relative">
+              <button type="button" @click="open = true" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">수정</button>
+              <div x-cloak x-show="open" class="fixed inset-0 z-30 bg-black/30" @click="open = false"></div>
+              <div x-cloak x-show="open" class="fixed left-1/2 top-1/2 z-40 w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-5 shadow-xl">
+                <div class="text-base font-semibold">{{ row.display_name or row.email }}</div>
+                <form method="post" action="/admin/budgets/users/{{ row.id }}" class="mt-4 grid gap-4">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div>
+                    <label class="block text-sm font-medium" for="user-monthly-{{ row.id }}">사용자 월 예산 USD</label>
+                    <input id="user-monthly-{{ row.id }}" name="monthly_limit_usd" type="number" min="0" step="0.0001" value="{% if row.has_user_override and row.user_monthly_limit_usd is not none %}{{ row.user_monthly_limit_usd }}{% endif %}" placeholder="팀 예산 사용" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+                    {% if row_errors and row_errors.monthly_limit_usd %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.monthly_limit_usd }}</p>{% endif %}
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium" for="user-reason-{{ row.id }}">변경 사유</label>
+                    <textarea id="user-reason-{{ row.id }}" name="reason" rows="3" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"></textarea>
+                    {% if row_errors and row_errors.reason %}<p class="mt-1 text-sm text-rose-700">{{ row_errors.reason }}</p>{% endif %}
+                  </div>
+                  <div class="flex justify-end gap-2">
+                    <button type="button" @click="open = false" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</button>
+                    <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">저장</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">No users</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

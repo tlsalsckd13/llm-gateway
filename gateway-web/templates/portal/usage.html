@@ -2,6 +2,13 @@
 {% block title %}내 사용량{% endblock %}
 {% block heading %}내 사용량{% endblock %}
 {% block content %}
+{% set budget = data.budget %}
+{% if budget.alert_level == "critical" %}
+<div class="mb-4 rounded border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">예산 사용률이 95% 이상입니다.</div>
+{% elif budget.alert_level == "warning" %}
+<div class="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">예산 사용률이 {{ budget.team_alert_threshold_pct }}% 이상입니다.</div>
+{% endif %}
+
 <section class="panel">
   <div class="panel-title">최근 30일</div>
   <div class="mt-4 grid gap-4 md:grid-cols-3">
@@ -20,6 +27,55 @@
       <div class="metric-value">${{ "%.4f"|format(data.usage.cost_usd or 0) }}</div>
       <div class="metric-sub">USD</div>
     </div>
+  </div>
+</section>
+
+<section class="panel mt-5">
+  <div class="panel-title">예산</div>
+  <div class="mt-4 grid gap-4 md:grid-cols-3">
+    <div class="metric-card">
+      <div class="metric-label">적용 월 한도</div>
+      <div class="metric-value">{% if budget.monthly_limit_usd is not none %}${{ "%.2f"|format(budget.monthly_limit_usd) }}{% else %}-{% endif %}</div>
+      <div class="metric-sub">{{ "%.1f"|format(budget.monthly_pct) }}% used</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">월 잔여</div>
+      <div class="metric-value">{% if budget.monthly_remaining_usd is not none %}${{ "%.2f"|format(budget.monthly_remaining_usd) }}{% else %}-{% endif %}</div>
+      <div class="metric-sub">${{ "%.4f"|format(budget.month_used or 0) }} used</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">팀 일 잔여</div>
+      <div class="metric-value">{% if budget.team_daily_remaining_usd is not none %}${{ "%.2f"|format(budget.team_daily_remaining_usd) }}{% else %}-{% endif %}</div>
+      <div class="metric-sub">{{ "%.1f"|format(budget.team_daily_pct) }}% used</div>
+    </div>
+  </div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead><tr><th>Scope</th><th>Used</th><th>Limit</th><th>Remaining</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="font-medium">Team Monthly</td>
+          <td>${{ "%.4f"|format(budget.team_month_used_usd or 0) }}</td>
+          <td>{% if budget.team_monthly_limit_usd is not none %}${{ "%.2f"|format(budget.team_monthly_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{% if budget.team_monthly_remaining_usd is not none %}${{ "%.2f"|format(budget.team_monthly_remaining_usd) }}{% else %}-{% endif %}</td>
+          <td>{{ "%.1f"|format(budget.team_monthly_pct) }}%</td>
+        </tr>
+        <tr>
+          <td class="font-medium">Team Daily</td>
+          <td>${{ "%.4f"|format(budget.team_day_used_usd or 0) }}</td>
+          <td>{% if budget.team_daily_limit_usd is not none %}${{ "%.2f"|format(budget.team_daily_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{% if budget.team_daily_remaining_usd is not none %}${{ "%.2f"|format(budget.team_daily_remaining_usd) }}{% else %}-{% endif %}</td>
+          <td>{{ "%.1f"|format(budget.team_daily_pct) }}%</td>
+        </tr>
+        <tr>
+          <td class="font-medium">User Monthly</td>
+          <td>${{ "%.4f"|format(budget.user_month_used_usd or 0) }}</td>
+          <td>{% if budget.has_user_override and budget.user_monthly_limit_usd is not none %}${{ "%.2f"|format(budget.user_monthly_limit_usd) }}{% else %}-{% endif %}</td>
+          <td>{% if budget.user_monthly_remaining_usd is not none %}${{ "%.2f"|format(budget.user_monthly_remaining_usd) }}{% else %}-{% endif %}</td>
+          <td>{{ "%.1f"|format(budget.user_monthly_pct) }}%</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </section>
 {% endblock %}

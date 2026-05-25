@@ -110,3 +110,7 @@
   text-align: center;
   padding: 1rem;
 }
+
+[x-cloak] {
+  display: none !important;
+}
