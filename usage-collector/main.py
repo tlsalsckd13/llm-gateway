@@ -1,6 +1,7 @@
 import os, re, time, json, hashlib, asyncio, logging, copy
 from datetime import datetime, timezone
 import asyncpg, httpx, boto3
+from botocore.config import Config
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -10,6 +11,8 @@ log = logging.getLogger("usage-collector")
 PORTKEY_URL = os.environ.get("PORTKEY_URL", "http://gateway:8787/v1/chat/completions")
 AWS_REGION  = os.environ.get("AWS_REGION", "ap-northeast-2")
 ANTHROPIC_BEDROCK_VERSION = "bedrock-2023-05-31"
+BEDROCK_CONNECT_TIMEOUT_SEC = int(os.environ.get("BEDROCK_CONNECT_TIMEOUT_SEC", "10"))
+BEDROCK_READ_TIMEOUT_SEC = int(os.environ.get("BEDROCK_READ_TIMEOUT_SEC", "4000"))
 
 BEDROCK_ANTHROPIC_ALLOWED_FIELDS = {
     "anthropic_version", "anthropic_beta",
@@ -31,6 +34,14 @@ def sanitize_for_bedrock(body):
     if dropped:
         log.info(f"sanitize: dropped {dropped}")
     return allowed
+
+
+def bedrock_client_config():
+    return Config(
+        connect_timeout=BEDROCK_CONNECT_TIMEOUT_SEC,
+        read_timeout=BEDROCK_READ_TIMEOUT_SEC,
+        retries={"max_attempts": 0},
+    )
 
 
 PRICING = {
@@ -311,8 +322,11 @@ async def startup():
         database=os.environ["DB_NAME"], user=os.environ["DB_USER"],
         password=os.environ["DB_PASSWORD"], ssl="require", min_size=1, max_size=5,
     )
-    bedrock_runtime = boto3.client("bedrock-runtime", region_name=AWS_REGION)
-    log.info(f"DB pool ready, bedrock client ready (region={AWS_REGION})")
+    bedrock_runtime = boto3.client("bedrock-runtime", region_name=AWS_REGION, config=bedrock_client_config())
+    log.info(
+        "DB pool ready, bedrock client ready "
+        f"(region={AWS_REGION}, connect_timeout={BEDROCK_CONNECT_TIMEOUT_SEC}s, read_timeout={BEDROCK_READ_TIMEOUT_SEC}s)"
+    )
 
 @app.on_event("shutdown")
 async def shutdown():

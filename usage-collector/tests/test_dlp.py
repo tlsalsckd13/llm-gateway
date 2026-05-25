@@ -52,3 +52,10 @@ def test_latest_user_message_detection():
         {"role": "user", "content": "latest"},
     ]
     assert collector.find_last_user_message_index(messages) == 2
+
+
+def test_bedrock_client_config_uses_long_stream_timeout():
+    config = collector.bedrock_client_config()
+    assert config.connect_timeout == collector.BEDROCK_CONNECT_TIMEOUT_SEC
+    assert config.read_timeout == collector.BEDROCK_READ_TIMEOUT_SEC
+    assert config.read_timeout >= 4000
