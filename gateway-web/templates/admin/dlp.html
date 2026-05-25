@@ -2,6 +2,12 @@
 {% block title %}DLP{% endblock %}
 {% block heading %}DLP{% endblock %}
 {% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/dlp/policies" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'policies' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Policies</a>
+  <a href="/admin/dlp/test" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'test' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Test</a>
+  <a href="/admin/dlp" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'events' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Events</a>
+</div>
+
 <section class="panel">
   <div class="panel-title">DLP Events</div>
   <div class="table-wrap mt-4">

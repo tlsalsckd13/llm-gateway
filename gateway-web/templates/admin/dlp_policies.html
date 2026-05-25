@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}DLP Policies{% endblock %}
+{% block heading %}DLP{% endblock %}
+{% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/dlp/policies" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'policies' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Policies</a>
+  <a href="/admin/dlp/test" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'test' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Test</a>
+  <a href="/admin/dlp" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'events' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Events</a>
+</div>
+
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">DLP Policies</div>
+      <div class="mt-1 text-sm text-zinc-500">{{ policies|length }} policies</div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="/admin/dlp/test" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">정책 테스트</a>
+      <a href="/admin/dlp/policies/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">정책 추가</a>
+    </div>
+  </div>
+
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Pattern</th>
+          <th>Action</th>
+          <th>Status</th>
+          <th>7d Matches</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for policy in policies %}
+        <tr class="{% if not policy.is_active %}bg-zinc-50 text-zinc-500{% endif %}">
+          <td>{{ policy.priority }}</td>
+          <td>
+            <div class="font-medium">{{ policy.name }}</div>
+            {% if policy.description %}<div class="mt-1 text-xs text-zinc-500">{{ policy.description }}</div>{% endif %}
+          </td>
+          <td><code>{{ policy.pattern_type }}</code></td>
+          <td><code title="{{ policy.pattern_regex }}">{{ policy.pattern_regex[:80] }}{% if policy.pattern_regex|length > 80 %}...{% endif %}</code></td>
+          <td>{{ policy.action }}</td>
+          <td>
+            <span class="rounded px-2 py-1 text-xs font-medium {% if policy.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-zinc-100 text-zinc-600{% endif %}">
+              {% if policy.is_active %}active{% else %}inactive{% endif %}
+            </span>
+          </td>
+          <td>{{ policy.match_count_7d }}</td>
+          <td>
+            <div class="flex flex-wrap gap-2">
+              <a href="/admin/dlp/policies/{{ policy.id }}" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">편집</a>
+              {% if policy.is_active %}
+              <form method="post" action="/admin/dlp/policies/{{ policy.id }}/deactivate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="inline-flex h-8 items-center rounded border border-rose-300 px-2 text-xs font-medium text-rose-700 hover:bg-rose-50">비활성화</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty">등록된 DLP 정책이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

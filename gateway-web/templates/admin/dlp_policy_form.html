@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "new" %}DLP 정책 추가{% else %}DLP 정책 편집{% endif %}{% endblock %}
+{% block heading %}DLP{% endblock %}
+{% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/dlp/policies" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'policies' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Policies</a>
+  <a href="/admin/dlp/test" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'test' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Test</a>
+  <a href="/admin/dlp" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'events' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Events</a>
+</div>
+
+{% if errors.form %}
+  <div class="mb-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+{% endif %}
+
+<div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+  <section class="panel">
+    <div class="panel-title">{% if mode == "new" %}정책 추가{% else %}정책 편집{% endif %}</div>
+    <form method="post" action="{% if mode == 'new' %}/admin/dlp/policies{% else %}/admin/dlp/policies/{{ policy.id }}{% endif %}" class="mt-5 grid gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-sm font-medium" for="name">Name</label>
+        <input id="name" name="name" value="{{ values.name or '' }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.name %}<p class="mt-1 text-sm text-rose-700">{{ errors.name }}</p>{% endif %}
+      </div>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label class="block text-sm font-medium" for="pattern_type">Type</label>
+          <select id="pattern_type" name="pattern_type" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+            {% for item in pattern_types %}
+            <option value="{{ item }}" {% if values.pattern_type == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+          {% if errors.pattern_type %}<p class="mt-1 text-sm text-rose-700">{{ errors.pattern_type }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="action">Action</label>
+          <select id="action" name="action" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+            {% for item in actions %}
+            <option value="{{ item }}" {% if values.action == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+          {% if errors.action %}<p class="mt-1 text-sm text-rose-700">{{ errors.action }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="priority">Priority</label>
+          <input id="priority" name="priority" type="number" min="1" max="10000" step="1" value="{{ values.priority or 100 }}" class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+          {% if errors.priority %}<p class="mt-1 text-sm text-rose-700">{{ errors.priority }}</p>{% endif %}
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="pattern_regex">Pattern Regex</label>
+        <textarea id="pattern_regex" name="pattern_regex" rows="4" required class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 font-mono text-sm outline-none focus:border-zinc-900">{{ values.pattern_regex or '' }}</textarea>
+        {% if errors.pattern_regex %}<p class="mt-1 text-sm text-rose-700">{{ errors.pattern_regex }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="redaction_token">Redaction Token</label>
+        <input id="redaction_token" name="redaction_token" value="{{ values.redaction_token or '' }}" required class="mt-1 h-10 w-full rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+        {% if errors.redaction_token %}<p class="mt-1 text-sm text-rose-700">{{ errors.redaction_token }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="description">Description</label>
+        <textarea id="description" name="description" rows="3" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ values.description or '' }}</textarea>
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_active" value="true" {% if values.is_active %}checked{% endif %} class="h-4 w-4 rounded border-zinc-300">
+        활성 상태
+      </label>
+
+      <div class="border-t border-zinc-200 pt-4">
+        <label class="block text-sm font-medium" for="sample_text">샘플 미리보기</label>
+        <textarea id="sample_text" name="sample_text" rows="4" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ values.sample_text or '' }}</textarea>
+        <div class="mt-3 flex flex-wrap justify-end gap-2">
+          <a href="/admin/dlp/policies" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+          <button type="submit" name="_action" value="preview" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">미리보기</button>
+          <button type="submit" name="_action" value="save" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">저장</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <aside class="grid gap-4 content-start">
+    <section class="panel">
+      <div class="panel-title">미리보기 결과</div>
+      {% if preview %}
+        <div class="mt-4 rounded border px-3 py-2 text-sm {% if preview.will_block %}border-rose-200 bg-rose-50 text-rose-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}">
+          {% if preview.will_block %}현재 입력은 차단됩니다.{% else %}현재 입력은 차단되지 않습니다.{% endif %}
+        </div>
+        <div class="mt-4 text-sm font-medium">Matched Text</div>
+        <div class="mt-2 rounded border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6">{{ preview.highlighted_text|safe }}</div>
+        <div class="mt-4 text-sm font-medium">Mask Result</div>
+        <pre class="mt-2 whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-3 text-sm">{{ preview.masked_text }}</pre>
+        <div class="mt-4 text-sm font-medium">Matches</div>
+        <div class="mt-2 grid gap-2">
+          {% for match in preview.matches %}
+          <div class="rounded border border-zinc-200 px-3 py-2 text-sm">
+            <span class="font-medium">{{ match.name }}</span>
+            <span class="text-zinc-500">({{ match.pattern_type }}, {{ match.action }})</span>
+            <code class="ml-1">{{ match.matched_text }}</code>
+          </div>
+          {% else %}
+          <div class="text-sm text-zinc-500">매칭된 텍스트가 없습니다.</div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="mt-3 text-sm text-zinc-500">샘플 텍스트를 입력하고 미리보기를 실행하세요.</div>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

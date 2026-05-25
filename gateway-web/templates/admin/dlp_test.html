@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}DLP Test{% endblock %}
+{% block heading %}DLP{% endblock %}
+{% block content %}
+<div class="mb-4 flex flex-wrap gap-2 text-sm">
+  <a href="/admin/dlp/policies" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'policies' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Policies</a>
+  <a href="/admin/dlp/test" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'test' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Test</a>
+  <a href="/admin/dlp" class="inline-flex h-9 items-center rounded border px-3 font-medium {% if active_tab == 'events' %}border-zinc-950 bg-zinc-950 text-white{% else %}border-zinc-300 bg-white hover:bg-zinc-50{% endif %}">Events</a>
+</div>
+
+{% if errors.form %}
+  <div class="mb-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+{% endif %}
+
+<div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
+  <section class="panel">
+    <div class="flex items-center justify-between gap-3">
+      <div class="panel-title">정책 테스트</div>
+      <div class="text-sm text-zinc-500">활성 정책 {{ policies|length }}개</div>
+    </div>
+    <form method="post" action="/admin/dlp/test" class="mt-5 grid gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-sm font-medium" for="sample_text">Sample Text</label>
+        <textarea id="sample_text" name="sample_text" rows="10" class="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ sample_text }}</textarea>
+      </div>
+      <div class="flex justify-end">
+        <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">테스트</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">결과</div>
+    {% if result %}
+      <div class="mt-4 rounded border px-3 py-2 text-sm {% if result.will_block %}border-rose-200 bg-rose-50 text-rose-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}">
+        {% if result.will_block %}이 입력은 현재 정책에 의해 차단됩니다.{% else %}이 입력은 현재 정책에서 차단되지 않습니다.{% endif %}
+      </div>
+      {% if result.invalid_policies %}
+      <div class="mt-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        일부 정책 정규식이 유효하지 않아 테스트에서 제외되었습니다.
+      </div>
+      {% endif %}
+      <div class="mt-4 text-sm font-medium">Matched Text</div>
+      <div class="mt-2 rounded border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6">{{ result.highlighted_text|safe }}</div>
+      <div class="mt-4 text-sm font-medium">Mask Result</div>
+      <pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-3 text-sm">{{ result.masked_text }}</pre>
+      <div class="mt-4 text-sm font-medium">Matched Policies</div>
+      <div class="mt-2 grid gap-2">
+        {% for match in result.matches %}
+        <div class="rounded border border-zinc-200 px-3 py-2 text-sm">
+          <span class="font-medium">{{ match.name }}</span>
+          <span class="text-zinc-500">({{ match.pattern_type }}, {{ match.action }})</span>
+          <code class="ml-1">{{ match.matched_text }}</code>
+        </div>
+        {% else %}
+        <div class="text-sm text-zinc-500">매칭된 정책이 없습니다.</div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mt-3 text-sm text-zinc-500">샘플을 입력하면 활성 DLP 정책 기준으로 차단 여부와 마스킹 결과를 확인합니다.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

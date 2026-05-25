@@ -11,6 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from admin.budgets import api_router as budget_api_router
 from admin.budgets import page_router as budget_page_router
+from admin.dlp import api_router as dlp_api_router
+from admin.dlp import page_router as dlp_page_router
 from admin.routes_api import router as admin_api_router
 from admin.routes_pages import router as admin_pages_router
 from admin.api_keys import api_router as api_key_api_router
@@ -80,6 +82,8 @@ attach_auth_middleware(app)
 app.include_router(auth_router)
 app.include_router(budget_page_router)
 app.include_router(budget_api_router)
+app.include_router(dlp_page_router)
+app.include_router(dlp_api_router)
 app.include_router(admin_pages_router)
 app.include_router(admin_api_router)
 app.include_router(api_key_page_router)

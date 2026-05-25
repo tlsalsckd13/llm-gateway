@@ -43,7 +43,7 @@ async def keys_page(request: Request):
 async def dlp_page(request: Request):
     async with request.app.state.db.acquire() as conn:
         data = await queries.dlp_rows(conn)
-    return request.app.state.templates.TemplateResponse("admin/dlp.html", ctx(request, "dlp", events=data))
+    return request.app.state.templates.TemplateResponse("admin/dlp.html", ctx(request, "dlp", active_tab="events", events=data))
 
 
 @router.get("/audit")
