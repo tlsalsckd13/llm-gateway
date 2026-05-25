@@ -72,8 +72,8 @@ async def upsert_admin(args):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--email", default="minchang@kcs.example.com")
-    parser.add_argument("--display-name", default="minchang")
+    parser.add_argument("--email", default="admin@example.com")
+    parser.add_argument("--display-name", default="Admin User")
     parser.add_argument("--team-id", default="infra")
     parser.add_argument("--password-stdin", action="store_true")
     return parser.parse_args()
