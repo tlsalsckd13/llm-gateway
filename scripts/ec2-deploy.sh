@@ -119,6 +119,8 @@ aws ecr get-login-password --region "$AWS_REGION" \
 
 sudo -E docker compose pull
 sudo -E docker compose up -d --remove-orphans
+sudo docker exec nginx-proxy nginx -t
+sudo docker exec nginx-proxy nginx -s reload
 sudo docker compose ps
 
 retry_curl() {
