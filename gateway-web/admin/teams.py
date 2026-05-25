@@ -234,6 +234,7 @@ async def team_keys(conn, team_id: int):
         WHERE (k.team_id = t.team_key OR k.user_id IN (
             SELECT email FROM web_users WHERE team_id_fk = t.id
         ))
+          AND k.revoked_at IS NULL
         ORDER BY k.created_at DESC
         LIMIT 100
         """,

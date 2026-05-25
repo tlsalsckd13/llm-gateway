@@ -103,6 +103,7 @@ async def key_rows(conn):
         FROM api_keys k
         LEFT JOIN web_users wu ON lower(wu.email) = lower(k.user_id)
         LEFT JOIN teams t ON t.id = wu.team_id_fk
+        WHERE k.revoked_at IS NULL
         ORDER BY k.created_at DESC
         LIMIT 200
         """

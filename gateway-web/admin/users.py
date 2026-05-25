@@ -265,6 +265,7 @@ async def user_keys(conn, user):
                label, created_at, expires_at, last_used_at, revoked_at
         FROM api_keys
         WHERE lower(user_id) = lower($1)
+          AND revoked_at IS NULL
         ORDER BY created_at DESC
         LIMIT 100
         """,

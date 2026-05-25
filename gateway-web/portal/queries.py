@@ -73,7 +73,7 @@ async def dashboard(conn, user):
     keys = await conn.fetchrow(
         """
         SELECT count(*) FILTER (WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now()))::int AS active_keys,
-               count(*)::int AS total_keys
+               count(*) FILTER (WHERE revoked_at IS NULL)::int AS total_keys
         FROM api_keys
         WHERE user_id = $1
         """,
@@ -134,6 +134,7 @@ async def my_keys(conn, user):
                END AS status
         FROM api_keys
         WHERE user_id = $1
+          AND revoked_at IS NULL
         ORDER BY created_at DESC
         LIMIT 100
         """,
