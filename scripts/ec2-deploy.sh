@@ -134,9 +134,27 @@ retry_curl() {
   return 1
 }
 
+retry_status() {
+  url="$1"
+  expected="$2"
+  extra="${3:-}"
+  for i in $(seq 1 30); do
+    code="$(curl -s -o /dev/null -w '%{http_code}' $extra "$url" || true)"
+    case ",$expected," in
+      *",$code,"*) return 0 ;;
+    esac
+    sleep 2
+  done
+  echo "status check failed: $url expected=$expected actual=$code"
+  return 1
+}
+
 retry_curl http://localhost:8080/health
 retry_curl http://127.0.0.1:8090/healthz
 retry_curl https://localhost/healthz "-k"
+retry_status https://localhost/admin/login 200 "-k"
+retry_status https://localhost/portal/keys/new 302 "-k"
+retry_status https://localhost/auth/reset-password 403 "-k"
 
 for container in usage-collector gateway-web nginx-proxy; do
   running="$(sudo docker inspect "$container" --format '{{.State.Running}}')"

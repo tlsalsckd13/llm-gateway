@@ -120,10 +120,36 @@ jobs:
 
       - name: Health check through SSM
         run: |
+          HEALTH_SCRIPT_B64=$(cat <<'SCRIPT' | base64 -w0
+          set -euo pipefail
+
+          check_status() {
+            url="$1"
+            expected="$2"
+            extra="${3:-}"
+            code="$(curl -s -o /dev/null -w '%{http_code}' $extra "$url" || true)"
+            case ",$expected," in
+              *",$code,"*) echo "$url -> $code" ;;
+              *)
+                echo "$url expected $expected got $code"
+                exit 1
+                ;;
+            esac
+          }
+
+          curl -sf http://localhost:8080/health >/dev/null
+          curl -sf http://127.0.0.1:8090/healthz >/dev/null
+          curl -skf https://localhost/healthz >/dev/null
+          check_status https://localhost/admin/login 200 -k
+          check_status https://localhost/portal/keys/new 302 -k
+          check_status https://localhost/auth/reset-password 403 -k
+          SCRIPT
+          )
+
           CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands="[\"curl -sf http://localhost:8080/health || exit 1\"]" \
+            --parameters commands="[\"echo $HEALTH_SCRIPT_B64 | base64 -d | bash\"]" \
             --query "Command.CommandId" --output text)
           sleep 10
           STATUS=$(aws ssm get-command-invocation \
