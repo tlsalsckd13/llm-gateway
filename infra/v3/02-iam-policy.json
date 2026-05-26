@@ -1,0 +1,54 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "V3SkillsAndKnowledgeBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3:::kcs-llm-gateway-skills-prod",
+        "arn:aws:s3:::kcs-llm-gateway-skills-prod/*",
+        "arn:aws:s3:::kcs-llm-gateway-kb-prod",
+        "arn:aws:s3:::kcs-llm-gateway-kb-prod/*"
+      ]
+    },
+    {
+      "Sid": "V3TitanEmbeddingInvoke",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-northeast-2::foundation-model/amazon.titan-embed-text-v2:0"
+      ]
+    },
+    {
+      "Sid": "V3BedrockGuardrailsRuntime",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:ApplyGuardrail",
+        "bedrock:GetGuardrail"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-northeast-2:061051247564:guardrail/*"
+      ]
+    },
+    {
+      "Sid": "V3McpCredentialSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:ap-northeast-2:061051247564:secret:/kcs-llm-gateway/mcp/*"
+      ]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ if [ ! -s /opt/llm-gateway/nginx/certs/server.crt ] || [ ! -s /opt/llm-gateway/n
 fi
 
 sudo tee /opt/llm-gateway/nginx/conf.d/gateway.locations >/dev/null <<'NGINX'
-    client_max_body_size 4m;
+    client_max_body_size 50m;
 
     location /v1/ {
         proxy_pass http://collector;
