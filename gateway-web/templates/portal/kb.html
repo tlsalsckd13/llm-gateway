@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}내 KB{% endblock %}
+{% block heading %}내 KB{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">Knowledge Base</div>
+      <div class="mt-1 text-sm text-zinc-500">내 팀 문서를 Claude 호출 context에 사용할지 설정합니다.</div>
+    </div>
+    {% if can_manage_team and not kb %}
+    <form method="post" action="/portal/kb/create">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">팀 KB 활성화</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if kb %}
+  <dl class="mt-5 grid gap-4 text-sm md:grid-cols-4">
+    <div><dt class="font-medium text-zinc-500">Team</dt><dd class="mt-1">{{ kb.team_name }}</dd></div>
+    <div><dt class="font-medium text-zinc-500">Documents</dt><dd class="mt-1">{{ kb.document_count or 0 }}</dd></div>
+    <div><dt class="font-medium text-zinc-500">Chunks</dt><dd class="mt-1">{{ kb.chunk_count or 0 }}</dd></div>
+    <div><dt class="font-medium text-zinc-500">My Default</dt><dd class="mt-1">{% if kb.user_kb_enabled %}enabled{% else %}disabled{% endif %}</dd></div>
+  </dl>
+  <form method="post" action="/portal/kb/toggle" class="mt-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="enabled" value="{% if kb.user_kb_enabled %}false{% else %}true{% endif %}">
+    <button type="submit" class="inline-flex h-9 items-center rounded {% if kb.user_kb_enabled %}border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50{% else %}bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800{% endif %}">
+      {% if kb.user_kb_enabled %}기본 사용 끄기{% else %}기본 사용 켜기{% endif %}
+    </button>
+  </form>
+  {% else %}
+  <div class="mt-4 rounded border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">아직 팀 KB가 활성화되지 않았습니다.</div>
+  {% endif %}
+</section>
+
+{% if kb and can_manage_team %}
+<section class="panel mt-6">
+  <div class="panel-title">팀 문서 업로드</div>
+  {% if errors.upload %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      {% for item in errors.upload %}<div>{{ item }}</div>{% endfor %}
+    </div>
+  {% endif %}
+  <form method="post" action="/portal/kb/documents" enctype="multipart/form-data" class="mt-4 grid gap-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input name="documents" type="file" multiple accept=".md,.txt,.html,.htm,.pdf,.docx" class="block w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">
+    <div class="flex justify-end">
+      <button type="submit" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">업로드 및 인덱싱</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+{% if kb %}
+<section class="panel mt-6">
+  <div class="panel-title">팀 문서</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 KB 문서 목록</caption>
+      <thead><tr><th scope="col">Title</th><th scope="col">Status</th><th scope="col">Chunks</th><th scope="col">Uploaded</th></tr></thead>
+      <tbody>
+      {% for doc in documents %}
+        <tr>
+          <td>{{ doc.title }}</td>
+          <td>{{ doc.ingestion_status }}</td>
+          <td>{{ doc.chunk_count or 0 }}</td>
+          <td>{{ doc.uploaded_at }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">문서가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
