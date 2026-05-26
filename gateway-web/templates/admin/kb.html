@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Knowledge Base{% endblock %}
+{% block heading %}Knowledge Base{% endblock %}
+{% block content %}
+<section class="panel">
+  <div>
+    <div class="panel-title">팀 Knowledge Base</div>
+    <div class="mt-1 text-sm text-zinc-500">팀별 문서 원본은 S3, 검색 청크는 RDS pgvector에 저장됩니다.</div>
+  </div>
+
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">팀 KB 목록</caption>
+      <thead>
+        <tr>
+          <th scope="col">Team</th>
+          <th scope="col">KB</th>
+          <th scope="col">Documents</th>
+          <th scope="col">Chunks</th>
+          <th scope="col">Embedding Cost</th>
+          <th scope="col">Status</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>
+            <div class="font-medium">{{ row.team_name }}</div>
+            <div class="mt-1 text-xs text-zinc-500">{{ row.team_key }}</div>
+          </td>
+          <td>{% if row.kb_id %}{{ row.name }}{% else %}-{% endif %}</td>
+          <td>{{ row.document_count or 0 }}</td>
+          <td>{{ row.chunk_count or 0 }}</td>
+          <td>${{ "%.6f"|format(row.embedding_cost_usd or 0) }}</td>
+          <td>{% if row.kb_id %}{{ row.status }}{% if not row.is_active %} / inactive{% endif %}{% else %}not created{% endif %}</td>
+          <td>
+            {% if row.kb_id %}
+            <a href="/admin/kb/{{ row.kb_id }}" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">상세</a>
+            {% else %}
+            <form method="post" action="/admin/kb/teams/{{ row.team_id }}/create">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="inline-flex h-8 items-center rounded bg-zinc-950 px-2 text-xs font-medium text-white hover:bg-zinc-800">활성화</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">팀이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

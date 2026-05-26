@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ kb.name }} KB{% endblock %}
+{% block heading %}{{ kb.name }} KB{% endblock %}
+{% block content %}
+<div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+  <section class="panel">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <div class="panel-title">{{ kb.team_name }}</div>
+        <div class="mt-1 text-sm text-zinc-500">{{ kb.s3_prefix }} · {{ kb.embedding_model }}</div>
+      </div>
+      <span class="rounded px-2 py-1 text-xs font-medium {% if kb.status == 'active' %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">{{ kb.status }}</span>
+    </div>
+    <dl class="mt-5 grid gap-4 text-sm md:grid-cols-4">
+      <div><dt class="font-medium text-zinc-500">Documents</dt><dd class="mt-1">{{ kb.document_count or 0 }}</dd></div>
+      <div><dt class="font-medium text-zinc-500">Chunks</dt><dd class="mt-1">{{ kb.chunk_count or 0 }}</dd></div>
+      <div><dt class="font-medium text-zinc-500">Top K</dt><dd class="mt-1">{{ kb.top_k_default }}</dd></div>
+      <div><dt class="font-medium text-zinc-500">Cost</dt><dd class="mt-1">${{ "%.6f"|format(kb.embedding_cost_usd or 0) }}</dd></div>
+    </dl>
+
+    {% if errors.upload %}
+      <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        {% for item in errors.upload %}<div>{{ item }}</div>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="/admin/kb/{{ kb.id }}/documents" enctype="multipart/form-data" class="mt-5 grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="block text-sm font-medium" for="documents">문서 업로드</label>
+      <input id="documents" name="documents" type="file" multiple accept=".md,.txt,.html,.htm,.pdf,.docx" class="block w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">
+      <div class="text-xs text-zinc-500">최대 10개, 파일당 50MB. DLP 차단 패턴이 포함되면 업로드되지 않습니다.</div>
+      <div class="flex justify-end">
+        <button type="submit" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">업로드 및 인덱싱</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-title">Retrieve 테스트</div>
+    <form method="post" action="/admin/kb/{{ kb.id }}/test-retrieve" class="mt-4 grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <textarea name="query" rows="4" required placeholder="검색할 질문" class="w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">{{ retrieve.query if retrieve else "" }}</textarea>
+      <input name="top_k" type="number" min="1" max="20" value="{{ kb.top_k_default or 5 }}" class="h-10 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      <button type="submit" class="inline-flex h-9 items-center justify-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">검색</button>
+    </form>
+  </aside>
+</div>
+
+{% if retrieve %}
+<section class="panel mt-6">
+  <div class="panel-title">검색 결과</div>
+  <div class="mt-4 grid gap-3">
+    {% for chunk in retrieve.chunks %}
+    <article class="rounded border border-zinc-200 p-3">
+      <div class="flex flex-wrap justify-between gap-2 text-xs text-zinc-500">
+        <span>{{ chunk.title or chunk.s3_key }}</span>
+        <span>{{ "%.3f"|format(chunk.score or 0) }}</span>
+      </div>
+      <p class="mt-2 whitespace-pre-wrap text-sm">{{ chunk.content }}</p>
+    </article>
+    {% else %}
+    <div class="empty">검색 결과가 없습니다.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="panel mt-6">
+  <div class="panel-title">문서</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">KB 문서 목록</caption>
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Status</th>
+          <th scope="col">Chunks</th>
+          <th scope="col">Cost</th>
+          <th scope="col">Uploaded</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for doc in documents %}
+        <tr>
+          <td>
+            <div class="font-medium">{{ doc.title }}</div>
+            <div class="mt-1 break-all text-xs text-zinc-500">{{ doc.s3_key }}</div>
+            {% if doc.ingestion_error %}<div class="mt-1 text-xs text-rose-700">{{ doc.ingestion_error }}</div>{% endif %}
+          </td>
+          <td>{{ doc.ingestion_status }}</td>
+          <td>{{ doc.chunk_count or 0 }}</td>
+          <td>${{ "%.6f"|format(doc.embedding_token_cost_usd or 0) }}</td>
+          <td>{{ doc.uploaded_at }}</td>
+          <td>
+            {% if not doc.removed_at %}
+            <form method="post" action="/admin/kb/{{ kb.id }}/documents/{{ doc.id }}/remove">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="inline-flex h-8 items-center rounded border border-rose-300 px-2 text-xs font-medium text-rose-700 hover:bg-rose-50">제거</button>
+            </form>
+            {% else %}
+            removed
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">업로드된 문서가 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

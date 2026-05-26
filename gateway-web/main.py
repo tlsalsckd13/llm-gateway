@@ -13,6 +13,8 @@ from admin.budgets import api_router as budget_api_router
 from admin.budgets import page_router as budget_page_router
 from admin.dlp import api_router as dlp_api_router
 from admin.dlp import page_router as dlp_page_router
+from admin.kb import api_router as kb_api_router
+from admin.kb import page_router as kb_page_router
 from admin.skills import api_router as skill_api_router
 from admin.skills import page_router as skill_page_router
 from admin.routes_api import router as admin_api_router
@@ -27,6 +29,8 @@ from auth.middleware import attach_auth_middleware
 from auth.routes import router as auth_router
 from portal.routes_api import router as portal_api_router
 from portal.routes_pages import router as portal_pages_router
+from portal.kb import api_router as portal_kb_api_router
+from portal.kb import page_router as portal_kb_page_router
 from portal.skills import api_router as portal_skill_api_router
 from portal.skills import page_router as portal_skill_page_router
 
@@ -88,6 +92,8 @@ app.include_router(budget_page_router)
 app.include_router(budget_api_router)
 app.include_router(dlp_page_router)
 app.include_router(dlp_api_router)
+app.include_router(kb_page_router)
+app.include_router(kb_api_router)
 app.include_router(skill_page_router)
 app.include_router(skill_api_router)
 app.include_router(admin_pages_router)
@@ -100,6 +106,8 @@ app.include_router(user_page_router)
 app.include_router(user_api_router)
 app.include_router(portal_pages_router)
 app.include_router(portal_api_router)
+app.include_router(portal_kb_page_router)
+app.include_router(portal_kb_api_router)
 app.include_router(portal_skill_page_router)
 app.include_router(portal_skill_api_router)
 
