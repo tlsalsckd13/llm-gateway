@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}내 Skills{% endblock %}
+{% block heading %}내 Skills{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">Skills</div>
+      <div class="mt-1 text-sm text-zinc-500">사용할 Skill을 선택합니다.</div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% if can_manage_team %}
+      <a href="/portal/skills/team/new" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">팀 Skill 발행</a>
+      {% endif %}
+      <a href="/portal/skills/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">내 Skill 발행</a>
+    </div>
+  </div>
+
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">활성 가능한 Skill 목록</caption>
+      <thead>
+        <tr>
+          <th scope="col">Skill</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Version</th>
+          <th scope="col">내 설정</th>
+          {% if can_manage_team %}<th scope="col">팀 설정</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for skill in skills %}
+        <tr>
+          <td>
+            <div class="font-medium">{{ skill.slug }}</div>
+            <div class="mt-1 max-w-xl text-xs text-zinc-500">{{ skill.description }}</div>
+          </td>
+          <td>
+            {{ skill.owner_scope }}
+            <div class="mt-1 text-xs text-zinc-500">
+              {% if skill.owner_scope == "team" %}{{ skill.owner_team_key }}
+              {% elif skill.owner_scope == "user" %}{{ skill.owner_user_email }}
+              {% else %}org{% endif %}
+            </div>
+          </td>
+          <td>{{ skill.latest_version or "-" }}</td>
+          <td>
+            <form method="post" action="/portal/skills/{{ skill.id }}/{% if skill.user_enabled %}deactivate{% else %}activate{% endif %}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="subject_scope" value="user">
+              <button type="submit" class="inline-flex h-8 items-center rounded {% if skill.user_enabled %}border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50{% else %}bg-zinc-950 px-2 text-xs font-medium text-white hover:bg-zinc-800{% endif %}">
+                {% if skill.user_enabled %}끄기{% else %}켜기{% endif %}
+              </button>
+            </form>
+          </td>
+          {% if can_manage_team %}
+          <td>
+            <form method="post" action="/portal/skills/{{ skill.id }}/{% if skill.team_enabled %}deactivate{% else %}activate{% endif %}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="subject_scope" value="team">
+              <button type="submit" class="inline-flex h-8 items-center rounded {% if skill.team_enabled %}border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50{% else %}bg-zinc-950 px-2 text-xs font-medium text-white hover:bg-zinc-800{% endif %}">
+                {% if skill.team_enabled %}팀 끄기{% else %}팀 켜기{% endif %}
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+      {% else %}
+        <tr><td colspan="{% if can_manage_team %}5{% else %}4{% endif %}" class="empty">활성 가능한 Skill이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">내가 발행한 Skills</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">발행한 Skill 목록</caption>
+      <thead><tr><th scope="col">Skill</th><th scope="col">Scope</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead>
+      <tbody>
+      {% for skill in published %}
+        <tr>
+          <td>{{ skill.slug }}</td>
+          <td>{{ skill.owner_scope }}{% if skill.owner_team_key %} / {{ skill.owner_team_key }}{% endif %}</td>
+          <td>{{ skill.latest_version or "-" }}</td>
+          <td>{{ skill.status }}</td>
+          <td>{{ skill.created_at }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">아직 발행한 Skill이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

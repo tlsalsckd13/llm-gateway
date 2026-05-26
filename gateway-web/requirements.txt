@@ -6,3 +6,4 @@ bcrypt==4.2.1
 itsdangerous==2.2.0
 python-multipart==0.0.20
 httpx==0.28.1
+boto3==1.35.86

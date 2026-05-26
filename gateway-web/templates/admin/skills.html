@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Skills{% endblock %}
+{% block heading %}Skills{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="panel-title">Skill 관리</div>
+      <div class="mt-1 text-sm text-zinc-500">SKILL.md zip 번들 발행/승인</div>
+    </div>
+    <a href="/admin/skills/new" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">Skill 업로드</a>
+  </div>
+
+  <form method="get" action="/admin/skills" class="mt-4 flex flex-wrap gap-2">
+    <label class="sr-only" for="q">검색</label>
+    <input id="q" name="q" value="{{ q }}" placeholder="skill name 또는 설명 검색" class="h-10 min-w-72 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+    <label class="sr-only" for="owner_scope">스코프</label>
+    <select id="owner_scope" name="owner_scope" class="h-10 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      <option value="">전체 스코프</option>
+      {% for scope in owner_scopes %}
+      <option value="{{ scope }}" {% if selected_scope == scope %}selected{% endif %}>{{ scope }}</option>
+      {% endfor %}
+    </select>
+    <label class="sr-only" for="status">상태</label>
+    <select id="status" name="status" class="h-10 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-900">
+      <option value="">전체 상태</option>
+      {% for status in statuses %}
+      <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="inline-flex h-10 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">검색</button>
+  </form>
+
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">Skill 목록</caption>
+      <thead>
+        <tr>
+          <th scope="col">Skill</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Version</th>
+          <th scope="col">Status</th>
+          <th scope="col">Active</th>
+          <th scope="col">Activations</th>
+          <th scope="col">Created</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for skill in skills["items"] %}
+        <tr>
+          <td>
+            <div class="font-medium">{{ skill.slug }}</div>
+            <div class="mt-1 max-w-xl text-xs text-zinc-500">{{ skill.description }}</div>
+          </td>
+          <td>
+            <div>{{ skill.owner_scope }}</div>
+            <div class="mt-1 text-xs text-zinc-500">
+              {% if skill.owner_scope == "team" %}{{ skill.owner_team_key }}
+              {% elif skill.owner_scope == "user" %}{{ skill.owner_user_email }}
+              {% else %}org{% endif %}
+            </div>
+          </td>
+          <td>{{ skill.latest_version or "-" }}</td>
+          <td>{{ skill.status }}</td>
+          <td>{% if skill.is_active %}yes{% else %}no{% endif %}</td>
+          <td>{{ skill.activation_count or 0 }}</td>
+          <td>{{ skill.created_at }}</td>
+          <td><a href="/admin/skills/{{ skill.id }}" class="inline-flex h-8 items-center rounded border border-zinc-300 px-2 text-xs font-medium hover:bg-zinc-50">상세</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="empty">등록된 Skill이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if skills.has_prev or skills.has_next %}
+  <nav class="mt-4 flex justify-end gap-2 text-sm" aria-label="페이지">
+    {% if skills.has_prev %}<a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="/admin/skills?page={{ skills.page - 1 }}&q={{ q }}&owner_scope={{ selected_scope }}&status={{ selected_status }}">이전</a>{% endif %}
+    <span class="inline-flex h-9 items-center px-2">{{ skills.page }}</span>
+    {% if skills.has_next %}<a class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 font-medium hover:bg-zinc-50" href="/admin/skills?page={{ skills.page + 1 }}&q={{ q }}&owner_scope={{ selected_scope }}&status={{ selected_status }}">다음</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

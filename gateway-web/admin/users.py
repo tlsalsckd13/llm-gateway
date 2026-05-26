@@ -15,7 +15,7 @@ from common.pagination import envelope, page_from_query
 page_router = APIRouter(prefix="/admin")
 api_router = APIRouter(prefix="/api/admin")
 
-ROLES = ("admin", "user")
+ROLES = ("admin", "team_owner", "user")
 
 
 class UserInvite(BaseModel):
@@ -88,7 +88,7 @@ def validate_user_payload(data: dict, *, creating: bool) -> tuple[dict | None, d
     if not display_name:
         errors["display_name"] = "표시 이름은 필수입니다."
     if role not in ROLES:
-        errors["role"] = "권한은 admin 또는 user만 선택할 수 있습니다."
+        errors["role"] = "권한은 admin, team_owner, user 중 하나여야 합니다."
     try:
         team_id_fk = int(team_raw)
     except (TypeError, ValueError):
