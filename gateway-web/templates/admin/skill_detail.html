@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ skill.slug }}{% endblock %}
+{% block heading %}{{ skill.slug }}{% endblock %}
+{% block content %}
+{% if errors.version %}
+  <div class="mb-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.version }}</div>
+{% endif %}
+
+<div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+  <section class="panel">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <div class="panel-title">{{ skill.slug }}</div>
+        <div class="mt-1 text-sm text-zinc-500">{{ skill.description }}</div>
+      </div>
+      <span class="rounded px-2 py-1 text-xs font-medium {% if skill.status == 'approved' %}bg-emerald-50 text-emerald-700{% elif skill.status == 'rejected' %}bg-rose-50 text-rose-700{% else %}bg-amber-50 text-amber-700{% endif %}">{{ skill.status }}</span>
+    </div>
+    <dl class="mt-5 grid gap-4 text-sm md:grid-cols-2">
+      <div><dt class="font-medium text-zinc-500">Scope</dt><dd class="mt-1">{{ skill.owner_scope }}</dd></div>
+      <div><dt class="font-medium text-zinc-500">Owner</dt><dd class="mt-1">{% if skill.owner_scope == "team" %}{{ skill.owner_team_key }}{% elif skill.owner_scope == "user" %}{{ skill.owner_user_email }}{% else %}org{% endif %}</dd></div>
+      <div><dt class="font-medium text-zinc-500">Latest Version</dt><dd class="mt-1">{{ skill.latest_version or "-" }}</dd></div>
+      <div><dt class="font-medium text-zinc-500">S3 Key</dt><dd class="mt-1 break-all"><code>{{ skill.latest_s3_key or "-" }}</code></dd></div>
+    </dl>
+
+    <div class="mt-5 flex flex-wrap gap-2">
+      <form method="post" action="/admin/skills/{{ skill.id }}/approve">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="inline-flex h-9 items-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">승인</button>
+      </form>
+      <form method="post" action="/admin/skills/{{ skill.id }}/reject">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium hover:bg-zinc-50">반려</button>
+      </form>
+      <form method="post" action="/admin/skills/{{ skill.id }}/archive">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="inline-flex h-9 items-center rounded border border-rose-300 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50">Archive</button>
+      </form>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-title">새 버전 업로드</div>
+    <form method="post" action="/admin/skills/{{ skill.id }}/versions" enctype="multipart/form-data" class="mt-4 grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input name="bundle" type="file" accept=".zip,application/zip" required class="block w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">
+      <button type="submit" class="inline-flex h-9 items-center justify-center rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800">업로드</button>
+    </form>
+  </aside>
+</div>
+
+<section class="panel mt-6">
+  <div class="panel-title">SKILL.md Preview</div>
+  <pre class="mt-4 max-h-96 overflow-auto rounded bg-zinc-950 p-4 text-xs text-zinc-50">{{ skill.latest_body_excerpt or "" }}</pre>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">Versions</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">Skill 버전 목록</caption>
+      <thead><tr><th scope="col">Version</th><th scope="col">S3 Key</th><th scope="col">SHA256</th><th scope="col">Uploaded</th></tr></thead>
+      <tbody>
+      {% for version in versions %}
+        <tr>
+          <td>{{ version.version }}</td>
+          <td class="break-all"><code>{{ version.s3_key }}</code></td>
+          <td><code>{{ version.sha256[:12] }}</code></td>
+          <td>{{ version.uploaded_at }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">버전이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="panel-title">Activations</div>
+  <div class="table-wrap mt-4">
+    <table class="data-table">
+      <caption class="sr-only">Skill 활성화 목록</caption>
+      <thead><tr><th scope="col">Scope</th><th scope="col">Subject</th><th scope="col">Enabled</th><th scope="col">At</th></tr></thead>
+      <tbody>
+      {% for activation in activations %}
+        <tr>
+          <td>{{ activation.subject_scope }}</td>
+          <td>{% if activation.subject_scope == "team" %}{{ activation.team_key }}{% else %}{{ activation.user_email }}{% endif %}</td>
+          <td>{{ activation.enabled }}</td>
+          <td>{{ activation.activated_at }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">활성화 이력이 없습니다.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

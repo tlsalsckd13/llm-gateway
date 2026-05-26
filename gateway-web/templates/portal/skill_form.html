@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{% if scope == "team" %}팀 Skill 발행{% else %}내 Skill 발행{% endif %}{% endblock %}
+{% block heading %}{% if scope == "team" %}팀 Skill 발행{% else %}내 Skill 발행{% endif %}{% endblock %}
+{% block content %}
+<section class="panel max-w-3xl">
+  <div class="panel-title">{% if scope == "team" %}팀 Skill 번들{% else %}내 Skill 번들{% endif %}</div>
+  {% if errors.form %}
+    <div class="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ errors.form }}</div>
+  {% endif %}
+  <form method="post" action="{% if scope == 'team' %}/portal/skills/team{% else %}/portal/skills{% endif %}" enctype="multipart/form-data" class="mt-5 grid gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label class="block text-sm font-medium" for="bundle">SKILL.md zip 번들</label>
+      <input id="bundle" name="bundle" type="file" accept=".zip,application/zip" required class="mt-1 block w-full rounded border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900">
+      {% if errors.bundle %}<p class="mt-1 text-sm text-rose-700">{{ errors.bundle }}</p>{% endif %}
+    </div>
+    <div class="rounded border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
+      {% if scope == "team" %}
+      팀 Skill은 admin 승인 후 팀 구성원이 활성화할 수 있습니다.
+      {% else %}
+      내 Skill은 발행 즉시 내 계정에 활성화됩니다.
+      {% endif %}
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="/portal/skills" class="inline-flex h-10 items-center rounded border border-zinc-300 px-4 text-sm font-medium hover:bg-zinc-50">취소</a>
+      <button type="submit" class="inline-flex h-10 items-center rounded bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">발행</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
